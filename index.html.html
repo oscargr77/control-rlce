@@ -1,0 +1,2597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control RLCE – Gestión de Solicitudes</title>
+<script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#1F3864;--blue:#2E75B6;--lblue:#D6E4F0;
+  --orange:#C55A11;--lorang:#FCE4D6;
+  --green:#375623;--lgreen:#E2EFDA;
+  --purple:#5C3B8C;--lpurple:#EDE7F6;
+  --grey:#F4F5F6;--dgrey:#4A4A4A;--border:#D8DCE0;
+  --white:#FFFFFF;--text:#1A1A2E;--muted:#6B7280;
+  --shadow:0 2px 12px rgba(31,56,100,0.10);--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:#EEF1F6;color:var(--text);min-height:100vh;font-size:14px;}
+
+/* HEADER */
+header{background:var(--navy);padding:0 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.25);}
+.header-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:54px;gap:12px;}
+.logo{color:#fff;font-size:12px;font-weight:600;letter-spacing:.04em;white-space:nowrap;}
+.logo span{color:#FFD966;}
+.tabs{display:flex;gap:3px;background:rgba(255,255,255,0.08);border-radius:8px;padding:3px;flex-wrap:wrap;}
+.tab{padding:6px 13px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;color:rgba(255,255,255,0.7);background:transparent;white-space:nowrap;}
+.tab:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.tab.active{font-weight:600;}
+.tab-ap.active{background:#B5D4F4;color:var(--navy);}
+.tab-ct.active{background:#F5C4B3;color:#7A3205;}
+.tab-ad.active{background:#C0DD97;color:var(--green);}
+.tab-dash.active{background:#FFD966;color:var(--navy);}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;border-radius:9px;font-size:10px;font-weight:600;margin-left:5px;background:rgba(255,255,255,0.2);color:#fff;}
+.tab.active .badge{background:rgba(31,56,100,0.15);color:var(--navy);}
+
+/* MAIN */
+main{max-width:1140px;margin:0 auto;padding:20px 14px;}
+.section{display:none;}.section.active{display:block;}
+
+/* PROCEDURE BANNER */
+.proc-banner{border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px;}
+.proc-banner-ap{background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);}
+.proc-banner-ct{background:linear-gradient(135deg,#7A3205 0%,var(--orange) 100%);}
+.proc-banner-ad{background:linear-gradient(135deg,var(--green) 0%,#70AD47 100%);}
+.proc-icon{font-size:28px;flex-shrink:0;margin-top:2px;}
+.proc-title{color:#fff;font-size:15px;font-weight:600;margin-bottom:4px;}
+.proc-sub{color:rgba(255,255,255,0.8);font-size:11px;line-height:1.6;}
+.proc-arts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.art-pill{background:rgba(255,255,255,0.2);color:#fff;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+.proc-actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+
+/* PROCEDURE STEPS */
+.steps-row{display:flex;gap:0;margin-bottom:18px;overflow-x:auto;padding-bottom:4px;}
+.step{display:flex;align-items:center;gap:0;flex-shrink:0;}
+.step-box{background:var(--white);border:1.5px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:110px;cursor:default;}
+.step-box.done{border-color:var(--green);background:var(--lgreen);}
+.step-box.active-step{border-color:var(--blue);background:var(--lblue);}
+.step-box.alert{border-color:#C00000;background:#FFCCCC;}
+.step-num{font-size:10px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--muted);}
+.step-lbl{font-size:10px;font-weight:600;color:var(--dgrey);text-align:center;}
+.step-days{font-size:9px;color:var(--muted);font-style:italic;}
+.step-arrow{color:var(--border);font-size:18px;padding:0 4px;flex-shrink:0;}
+
+/* FORM CARDS */
+.form-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.form-card-head{padding:12px 18px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.fch-ap{background:var(--lblue);color:var(--navy);}
+.fch-ct{background:var(--lorang);color:var(--orange);}
+.fch-ad{background:var(--lgreen);color:var(--green);}
+.fch-edit{background:#FFF2CC;color:#7F6000;}
+.form-body{padding:18px;}
+
+/* GRID */
+.fg{display:grid;gap:12px;}
+.fg-2{grid-template-columns:1fr 1fr;}
+.fg-3{grid-template-columns:1fr 1fr 1fr;}
+.fg-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.fg-13{grid-template-columns:1fr 3fr;}
+.span2{grid-column:span 2;}
+.span3{grid-column:span 3;}
+.span4{grid-column:span 4;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:10px;font-weight:600;color:var(--dgrey);letter-spacing:.03em;text-transform:uppercase;}
+.field label .req{color:#C00000;margin-left:2px;}
+.field label .art{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:400;color:var(--muted);margin-left:5px;text-transform:none;letter-spacing:0;}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:8px 10px;
+  border:1.5px solid var(--border);border-radius:7px;background:var(--white);
+  color:var(--text);transition:border-color .15s,box-shadow .15s;width:100%;appearance:none;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,0.12);}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;}
+textarea{resize:vertical;min-height:60px;}
+input.err,select.err,textarea.err{border-color:#C00000;}
+input[readonly]{background:var(--grey);color:var(--muted);}
+.field-note{font-size:10px;color:var(--muted);font-style:italic;}
+.sdiv{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 0 5px;border-bottom:1px solid var(--border);margin-bottom:2px;}
+.mb{margin-bottom:12px;}
+
+/* DYNAMIC LIST (audiencias, escritos) */
+.dyn-list{border:1.5px solid var(--border);border-radius:8px;overflow:hidden;}
+.dyn-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;}
+.dyn-item:last-child{border-bottom:none;}
+.dyn-item-del{background:none;border:none;cursor:pointer;color:#C00000;font-size:13px;padding:2px 5px;border-radius:4px;}
+.dyn-item-del:hover{background:#FFCCCC;}
+.dyn-add-row{display:flex;gap:8px;align-items:flex-end;padding:10px;background:var(--grey);}
+.dyn-empty{padding:12px;text-align:center;color:var(--muted);font-size:11px;font-style:italic;}
+.btn-dyn-add{padding:7px 14px;border-radius:6px;border:1.5px solid var(--blue);background:var(--lblue);color:var(--navy);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-dyn-add:hover{background:var(--blue);color:#fff;}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-top:6px;}
+.btn{padding:9px 18px;border-radius:7px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.btn-primary-ap{background:var(--blue);color:#fff;}.btn-primary-ap:hover{background:#1F5C9A;}
+.btn-primary-ct{background:var(--orange);color:#fff;}.btn-primary-ct:hover{background:#9E4408;}
+.btn-primary-ad{background:var(--green);color:#fff;}.btn-primary-ad:hover{background:#254018;}
+.btn-save-edit{background:#FFD966;color:var(--navy);}.btn-save-edit:hover{background:#F0C040;}
+.btn-ghost{background:transparent;color:var(--dgrey);border:1.5px solid var(--border);}.btn-ghost:hover{background:var(--grey);}
+.btn-export{background:var(--navy);color:#FFD966;font-size:11px;}.btn-export:hover{background:#142748;}
+.btn-draft{background:transparent;color:var(--muted);border:1.5px solid var(--border);font-size:11px;}
+
+/* EDIT MODE BANNER */
+.edit-banner{background:#FFF2CC;border:1.5px solid #FFD966;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:12px;color:#7F6000;font-weight:500;}
+.edit-banner button{margin-left:auto;background:none;border:none;cursor:pointer;color:#7F6000;font-size:11px;text-decoration:underline;}
+
+/* DRAFT BAR */
+.draft-bar{background:#FFF3CD;border:1px solid #FFD966;border-radius:7px;padding:8px 14px;font-size:11px;color:#7F6000;display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.draft-bar button{margin-left:auto;background:none;border:none;cursor:pointer;color:#7F6000;font-size:11px;text-decoration:underline;}
+
+/* RECORDS TABLE */
+.records-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.records-head{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.records-title{font-size:12px;font-weight:600;}
+.records-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead th{padding:8px 10px;text-align:left;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--grey);white-space:nowrap;}
+tbody td{padding:8px 10px;border-bottom:1px solid #F0F1F3;vertical-align:middle;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tbody tr:hover td{background:#F8FAFC;}
+tbody tr:last-child td{border-bottom:none;}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600;}
+.p-tramite{background:#FFF2CC;color:#7F6000;}
+.p-aprobado{background:var(--lgreen);color:var(--green);}
+.p-denegado,.p-rechazado,.p-desfavorable{background:#FFCCCC;color:#C00000;}
+.p-favorable{background:var(--lgreen);color:var(--green);}
+.p-parcial{background:#E3F2FD;color:#1565C0;}
+.p-evaluacion{background:var(--lpurple);color:var(--purple);}
+.p-silencio{background:#E8F5E9;color:#2E7D32;}
+.btn-tbl{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:13px;transition:background .12s;}
+.btn-edit-tbl{color:var(--blue);}.btn-edit-tbl:hover{background:var(--lblue);}
+.btn-del-tbl{color:#C00000;}.btn-del-tbl:hover{background:#FFCCCC;}
+.empty-state{padding:30px;text-align:center;color:var(--muted);font-size:12px;}
+
+/* HISTORIAL */
+.hist-wrap{font-size:10px;color:var(--muted);font-style:italic;margin-top:4px;line-height:1.5;}
+
+/* STATS */
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.stat-chip{background:var(--white);border-radius:8px;padding:10px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;min-width:90px;}
+.sc-val{font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+.sc-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.sc-ap{border-top:3px solid var(--blue);}
+.sc-ct{border-top:3px solid var(--orange);}
+.sc-ad{border-top:3px solid var(--green);}
+.sc-warn{border-top:3px solid #C00000;}
+
+/* DASHBOARD */
+.dash-header{background:var(--navy);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.dash-title{color:#FFD966;font-size:15px;font-weight:600;}
+.dash-sub{color:rgba(255,255,255,0.55);font-size:10px;margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px;}
+.kpi-card{background:var(--white);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);}
+.kpi-val{font-size:24px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+.kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.dash-full{margin-bottom:14px;}
+.chart-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.chart-card.span2{grid-column:span 2;}
+.chart-head{padding:11px 16px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.chart-title{font-size:11px;font-weight:600;color:var(--dgrey);}
+.chart-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+.chart-body{padding:14px 16px;position:relative;}
+.legend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;justify-content:center;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--dgrey);}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.gauge-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:6px 0;}
+.tl-table{width:100%;border-collapse:collapse;font-size:11px;min-width:480px;}
+.tl-table th{padding:7px 10px;background:var(--grey);text-align:left;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+.tl-table td{padding:7px 10px;border-bottom:1px solid #F0F1F3;vertical-align:middle;}
+.days-vencido{background:#FFCCCC;color:#C00000;}
+.days-urgente{background:#FFF2CC;color:#7F6000;}
+.days-ok{background:var(--lgreen);color:var(--green);}
+.days-na{background:var(--grey);color:var(--muted);}
+.days-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;}
+.empty-dash{padding:24px;text-align:center;color:var(--muted);font-size:11px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:8px;font-size:12px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.25);transform:translateY(80px);opacity:0;transition:all .22s;z-index:999;max-width:300px;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.ok{background:var(--green);}
+#toast.err{background:#C00000;}
+#toast.warn{background:#C55A11;}
+
+@media(max-width:680px){
+  .fg-2,.fg-3,.fg-4,.fg-13{grid-template-columns:1fr;}
+  .span2,.span3,.span4{grid-column:span 1;}
+  .dash-grid{grid-template-columns:1fr;}
+  .chart-card.span2{grid-column:span 1;}
+  .header-inner{height:auto;padding:8px 0;flex-direction:column;align-items:flex-start;gap:6px;}
+  header{padding:8px 14px;position:relative;}
+  .proc-actions{display:none;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">CONTROL RLCE <span>·</span> Ley N° 30225</div>
+    <div class="tabs">
+      <button class="tab tab-ap active" onclick="switchTab('ap')">📋 Ampl. Plazo <span class="badge" id="badge-ap">0</span></button>
+      <button class="tab tab-ct" onclick="switchTab('ct')">⚖️ Controversias <span class="badge" id="badge-ct">0</span></button>
+      <button class="tab tab-ad" onclick="switchTab('ad')">➕ Adicionales <span class="badge" id="badge-ad">0</span></button>
+      <button class="tab tab-dash" onclick="switchTab('dash')">📊 Dashboard</button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+      <div style="color:#FFD966;font-size:11px;font-weight:600;letter-spacing:.04em;text-align:right;white-space:nowrap;opacity:0.92;">CONSULTORA<br>GÁLVEZ RODRÍGUEZ</div>
+      <div id="sync-status" title="Estado de sincronización con Google Sheets" style="cursor:pointer;" onclick="loadFromSheets()">
+        <span style="color:#7F7F7F;font-weight:600;font-size:11px;">◌ Solo local</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- AP – AMPLIACIONES DE PLAZO                                 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="sec-ap" class="section active">
+
+<div class="proc-banner proc-banner-ap">
+  <div class="proc-icon">📋</div>
+  <div style="flex:1">
+    <div class="proc-title">Ampliaciones de Plazo de Ejecución de Obra</div>
+    <div class="proc-sub">El residente anota inicio y fin de la causal en el cuaderno de obra. Solicitud dentro de los 15 días hábiles de concluida la circunstancia. Supervisor emite informe en 5 días hábiles. Entidad resuelve en 15 días hábiles. Silencio = aprobado a los 20 días hábiles (Art. 198.4).</div>
+    <div class="proc-arts">
+      <span class="art-pill">Art. 197 RLCE</span><span class="art-pill">Art. 198 RLCE</span>
+      <span class="art-pill">Art. 199 RLCE</span><span class="art-pill">Art. 200 RLCE</span>
+      <span class="art-pill">Art. 201 RLCE</span>
+    </div>
+  </div>
+  <div class="proc-actions">
+    <button class="btn btn-draft" onclick="saveDraft('ap')">💾 Borrador</button>
+    <button class="btn btn-export" onclick="exportExcel('ap')">⬇ Excel</button>
+  </div>
+</div>
+
+<!-- Pasos del procedimiento AP -->
+<div class="steps-row" id="steps-ap">
+  <div class="step"><div class="step-box" id="step-ap-1"><span class="step-num">01</span><span class="step-lbl">Ocurrencia de la causal</span><span class="step-days">Art. 197 RLCE</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box" id="step-ap-2"><span class="step-num">02</span><span class="step-lbl">Anotación en cuaderno de obra</span><span class="step-days">Inicio y fin · Art. 198.1</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box" id="step-ap-3"><span class="step-num">03</span><span class="step-lbl">Solicitud al inspector/supervisor</span><span class="step-days">15 d.h. de concluida · Art. 198.1</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box" id="step-ap-4"><span class="step-num">04</span><span class="step-lbl">Informe supervisor/inspector</span><span class="step-days">5 d.h. · Art. 198.2</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box" id="step-ap-5"><span class="step-num">05</span><span class="step-lbl">Resolución de la Entidad</span><span class="step-days">15 d.h. · Art. 198.2</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box" id="step-ap-6"><span class="step-num">06</span><span class="step-lbl">Silencio = Aprobado / Addenda</span><span class="step-days">20 d.h. sin pronunciamiento · Art. 198.4</span></div></div>
+</div>
+
+<div id="draft-bar-ap" class="draft-bar" style="display:none">
+  ⏱ Borrador recuperado. Completa y guarda.
+  <button onclick="clearDraft('ap')">Descartar</button>
+</div>
+<div id="edit-banner-ap" class="edit-banner" style="display:none">
+  ✏️ Modo edición — registro <strong id="edit-codigo-ap"></strong>. Los cambios reemplazarán el registro existente.
+  <button onclick="cancelEdit('ap')">Cancelar edición</button>
+</div>
+
+<div class="stats-row" id="stats-ap"></div>
+
+<div class="form-card">
+  <div class="form-card-head fch-ap" id="form-head-ap">📋 Nueva Ampliación de Plazo</div>
+  <div class="form-body">
+
+    <div class="sdiv mb">I. Identificación</div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Código AP <span class="req">*</span></label><input type="text" id="ap-codigo" placeholder="AP-001"></div>
+      <div class="field"><label>Código de carta de presentación de SAP <span class="req">*</span></label><input type="text" id="ap-carta-pres" placeholder="Carta N°..."></div>
+      <div class="field"><label>Fecha de presentación de la SAP <span class="req">*</span></label><input type="date" id="ap-fec-pres" oninput="calcAPFecLim()"><span class="field-note" id="ap-lim-note"></span></div>
+    </div>
+
+    <div class="sdiv mb">II. Causal de la ampliación <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 197 RLCE</span></div>
+    <div class="fg mb">
+      <div class="field">
+        <label>Causal <span class="req">*</span> <span class="art">Art. 197</span></label>
+        <select id="ap-causal">
+          <option value="">-- Seleccionar causal --</option>
+          <option value="a">a) Atrasos y/o paralizaciones por causas no atribuibles al contratista</option>
+          <option value="b">b) Plazo adicional para ejecución de prestación adicional de obra</option>
+          <option value="c">c) Plazo adicional para ejecución de mayores metrados (contratos a precios unitarios)</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg mb">
+      <div class="field"><label>Descripción detallada de la causal <span class="req">*</span></label>
+        <textarea id="ap-descripcion" rows="3" placeholder="Describir con precisión el hecho que origina la causal, indicando fecha de inicio, duración, impacto en la ruta crítica y partidas afectadas..."></textarea>
+      </div>
+    </div>
+
+    <div class="sdiv mb">III. Cronograma afectado</div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Fecha inicio del hecho <span class="req">*</span></label><input type="date" id="ap-fecha-inicio"></div>
+      <div class="field"><label>Fecha fin del hecho</label><input type="date" id="ap-fecha-fin"></div>
+      <div class="field"><label>Días de retraso en ruta crítica</label><input type="number" id="ap-dias-rc" placeholder="0" min="0"></div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Comunicación del cronograma vigente <span class="req">*</span></label>
+        <input type="text" id="ap-cod-cronograma" placeholder="Carta / Oficio N° con que se remitió el cronograma vigente">
+        <span class="field-note">Código del documento con el que se comunicó el cronograma de ejecución de obra vigente</span>
+      </div>
+      <div class="field"><label>Impacto en ruta crítica</label>
+        <textarea id="ap-impacto" rows="2" placeholder="Describir cómo el hecho afecta la ruta crítica del cronograma vigente..."></textarea>
+      </div>
+    </div>
+
+    <div class="sdiv mb">IV. Sustento documental <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 198.1 RLCE</span></div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Asiento de cuaderno de obra – INICIO de causal <span class="req">*</span></label>
+        <input type="text" id="ap-asiento-inicio" placeholder="Asiento N°... del DD/MM/AAAA">
+        <span class="field-note">Asiento con el que el residente anotó el inicio de la circunstancia (Art. 198.1)</span>
+      </div>
+      <div class="field"><label>Asiento de cuaderno de obra – CIERRE de causal <span class="req">*</span></label>
+        <input type="text" id="ap-asiento-cierre" placeholder="Asiento N°... del DD/MM/AAAA">
+        <span class="field-note">Asiento con el que el residente anotó el fin de la circunstancia (Art. 198.1)</span>
+      </div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Documento de sustento adicional</label><input type="text" id="ap-documento" placeholder="Carta N°, Informe N°, Acta N°..."></div>
+      <div class="field"><label>Informe del residente</label><input type="text" id="ap-inf-residente" placeholder="Informe N°..."></div>
+    </div>
+
+    <div class="sdiv mb">V. Solicitud formal <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 198.1 RLCE · Plazo: dentro de los 15 d.c. siguientes de concluida la circunstancia</span></div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Días solicitados <span class="req">*</span></label><input type="number" id="ap-dias" placeholder="0" min="1"></div>
+      <div class="field"><label>Fecha límite informe supervisor <span class="art">(+5 d.h. · Art. 198.2)</span></label><input type="date" id="ap-fec-lim" readonly></div>
+      <div class="field"><label>Fecha límite resolución Entidad <span class="art">(+20 d.h. · Art. 198.4)</span></label><input type="date" id="ap-fec-lim-entidad" readonly></div>
+    </div>
+
+    <div class="sdiv mb">VI. Pronunciamiento de la Entidad <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 198 RLCE</span></div>
+
+    <!-- Cuadro informativo de plazos Art. 198 -->
+    <div style="background:#EBF3FB;border:1px solid #B5D4F4;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:var(--navy);line-height:1.8;">
+      <strong>⏱ Plazos según Art. 198 RLCE:</strong><br>
+      <span style="display:inline-block;min-width:320px;">① Contratista presenta solicitud al inspector/supervisor con copia a la Entidad</span><span style="font-weight:600;">→ dentro de los 15 d.c. de concluida la causal</span><br>
+      <span style="display:inline-block;min-width:320px;">② Inspector/supervisor emite informe a la Entidad y al contratista</span><span style="font-weight:600;">→ dentro de los 5 d.h. de presentada la solicitud (Art. 198.2)</span><br>
+      <span style="display:inline-block;min-width:320px;">③ Entidad resuelve y notifica su decisión al contratista</span><span style="font-weight:600;">→ dentro de los 15 d.h. contados desde la presentación (Art. 198.2)</span><br>
+      <span style="display:inline-block;min-width:320px;">④ Si la Entidad NO se pronuncia y NO existe opinión del supervisor/inspector</span><span style="font-weight:600;">→ se considera ampliado el plazo a los 20 d.h. (Art. 198.4)</span><br>
+      <span id="ap-aviso-plazos" style="display:none;color:#C00000;font-weight:600;"></span>
+    </div>
+
+    <div class="fg fg-4 mb">
+      <div class="field"><label>Estado <span class="req">*</span></label>
+        <select id="ap-estado" onchange="updateAPSteps()">
+          <option value="">-- Seleccionar --</option>
+          <option>EN TRÁMITE</option>
+          <option>APROBADO</option>
+          <option>APROBADO PARCIAL</option>
+          <option>DENEGADO</option>
+          <option>SILENCIO POSITIVO (Art. 198.4)</option>
+          <option>RETIRADO</option>
+        </select>
+      </div>
+      <div class="field"><label>Días aprobados</label><input type="number" id="ap-dias-ap" placeholder="0" min="0"></div>
+      <div class="field"><label>N° resolución / documento Entidad</label><input type="text" id="ap-nresol" placeholder="Resolución N°..."></div>
+      <div class="field"><label>Fecha respuesta Entidad</label><input type="date" id="ap-fec-resp"></div>
+    </div>
+
+    <div class="sdiv mb">VII. Modificación contractual</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>N° addenda / modificación contractual</label><input type="text" id="ap-addenda" placeholder="Addenda N°..."></div>
+      <div class="field"><label>Nueva fecha de término contractual</label><input type="date" id="ap-nueva-fecha"></div>
+    </div>
+
+    <div class="sdiv mb">VIII. Observaciones y seguimiento</div>
+    <div class="fg mb">
+      <div class="field"><label>Observaciones / acciones pendientes</label>
+        <textarea id="ap-obs" rows="2" placeholder="Acciones a tomar, fechas de seguimiento, riesgos, estrategia..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="cancelEdit('ap');resetForm('ap')">Limpiar</button>
+      <button class="btn btn-save-edit" id="btn-save-edit-ap" style="display:none" onclick="saveEdit('ap')">💾 Guardar cambios</button>
+      <button class="btn btn-primary-ap" id="btn-add-ap" onclick="addRecord('ap')">+ Agregar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="records-card">
+  <div class="records-head">
+    <div class="records-title" id="rtitle-ap">Registros (0)</div>
+    <div class="records-actions">
+      <button class="btn btn-ghost" style="font-size:10px;" onclick="clearAll('ap')">Limpiar todo</button>
+      <button class="btn btn-export" onclick="exportExcel('ap')">⬇ Exportar Excel</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr>
+      <th>N°</th><th>Código</th><th>Causal</th><th>Días Sol.</th><th>F. Presentación</th>
+      <th>F. Límite Entidad</th><th>Días Aprob.</th><th>N° Resolución</th><th>Estado</th>
+      <th style="min-width:180px;">Observaciones / Seguimiento</th><th>Últ. mod.</th><th>Acciones</th>
+    </tr></thead>
+    <tbody id="tbody-ap"><tr><td colspan="12"><div class="empty-state">Sin registros aún</div></td></tr></tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /sec-ap -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- CT – CONTROVERSIAS / JRD                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="sec-ct" class="section">
+
+<div class="proc-banner proc-banner-ct">
+  <div class="proc-icon">⚖️</div>
+  <div style="flex:1">
+    <div class="proc-title">Controversias – Junta de Resolución de Disputas (JRD) y Arbitraje</div>
+    <div class="proc-sub">JRD voluntaria hasta S/ 20,000,000 · Obligatoria para contratos superiores (Directiva 6.1 / Art. 243.4 RLCE). Todos los plazos en días hábiles salvo indicación expresa (Directiva 6.2). Decisiones vinculantes e inmediato cumplimiento (Art. 250 RLCE). Decisiones fuera de plazo = ineficaces (Directiva 7.16).</div>
+    <div class="proc-arts">
+      <span class="art-pill">Directiva 012-2019-OSCE</span>
+      <span class="art-pill">Art. 243 RLCE</span><span class="art-pill">Art. 246 RLCE</span>
+      <span class="art-pill">Art. 250 RLCE</span><span class="art-pill">Art. 251 RLCE</span>
+      <span class="art-pill">Art. 224 RLCE</span>
+    </div>
+  </div>
+  <div class="proc-actions">
+    <button class="btn btn-draft" onclick="saveDraft('ct')">💾 Borrador</button>
+    <button class="btn btn-export" onclick="exportExcel('ct')">⬇ Excel</button>
+  </div>
+</div>
+
+<!-- Pasos del procedimiento JRD según Directiva 012-2019-OSCE/CD -->
+<div class="steps-row">
+  <div class="step"><div class="step-box"><span class="step-num">01</span><span class="step-lbl">Petición al Centro</span><span class="step-days">5 req. mínimos · Dir. 7.12</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">02</span><span class="step-lbl">Traslado a la otra parte</span><span class="step-days">3 d.h. · Dir. 7.13</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">03</span><span class="step-lbl">Contestación</span><span class="step-days">15 d.h. · Dir. 7.13</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">04</span><span class="step-lbl">Audiencia</span><span class="step-days">10 d.h. máx. · Dir. 7.14</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">05</span><span class="step-lbl">Decisión JRD al Centro</span><span class="step-days">15 d.h. · Dir. 7.16</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">06</span><span class="step-lbl">Notificación a partes</span><span class="step-days">3 d.h. · Dir. 7.16</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">07</span><span class="step-lbl">Cumplimiento inmediato</span><span class="step-days">Art. 250 RLCE</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">08</span><span class="step-lbl">Arbitraje (si disconforme)</span><span class="step-days">30 d.h. desde recepción · Art. 251.3</span></div></div>
+</div>
+
+<div id="draft-bar-ct" class="draft-bar" style="display:none">
+  ⏱ Borrador recuperado. Completa y guarda.
+  <button onclick="clearDraft('ct')">Descartar</button>
+</div>
+<div id="edit-banner-ct" class="edit-banner" style="display:none">
+  ✏️ Modo edición — registro <strong id="edit-codigo-ct"></strong>.
+  <button onclick="cancelEdit('ct')">Cancelar</button>
+</div>
+
+<div class="stats-row" id="stats-ct"></div>
+
+<div class="form-card">
+  <div class="form-card-head fch-ct" id="form-head-ct">⚖️ Nueva Controversia / JRD</div>
+  <div class="form-body">
+
+    <div class="sdiv mb">I. Identificación</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Código <span class="req">*</span></label><input type="text" id="ct-codigo" placeholder="JRD-001 / ARB-001"></div>
+      <div class="field"><label>Tipo de mecanismo <span class="req">*</span></label>
+        <select id="ct-tipo">
+          <option value="">-- Seleccionar --</option>
+          <option>JRD – Decisión (Dir. 7.12 / Art. 246 RLCE)</option>
+          <option>JRD – Función consultiva (Dir. 7.6 / Art. 246.1.b)</option>
+          <option>Arbitraje Ad hoc (Art. 225 RLCE)</option>
+          <option>Arbitraje institucional – OSCE (Art. 236 RLCE)</option>
+          <option>Conciliación previa al arbitraje (Art. 224 RLCE)</option>
+          <option>Acuerdo directo entre partes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sdiv mb">II. Materia en controversia</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Materia / descripción de la controversia <span class="req">*</span></label>
+        <textarea id="ct-materia" rows="3" placeholder="Describir: naturaleza y circunstancias de la controversia, pretensión del contratista, posición de la Entidad (Dir. 7.12 – requisitos mínimos de la petición)..."></textarea>
+      </div>
+      <div class="field"><label>Fundamento legal y base contractual</label>
+        <textarea id="ct-fundamento" rows="3" placeholder="Arts. del RLCE/LCE/Directiva invocados, cláusulas contractuales, normas técnicas. Nota: no procede JRD para nulidad del contrato ni incumplimiento de pago final (Dir. 7.6)..."></textarea>
+      </div>
+    </div>
+
+    <div class="sdiv mb">III. Montos y plazos en disputa</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Monto en disputa (S/) <span class="req">*</span></label>
+        <input type="number" id="ct-monto" placeholder="0.00" min="0" step="0.01">
+        <span class="field-note">Monto económico objeto de la controversia</span>
+      </div>
+      <div class="field"><label>Monto reconocido en decisión / laudo (S/)</label>
+        <input type="number" id="ct-montorec" placeholder="0.00" min="0" step="0.01">
+        <span class="field-note">Completar al obtener decisión (Dir. 7.16) o laudo</span>
+      </div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Plazo en disputa (días)</label>
+        <input type="number" id="ct-plazo-disp" placeholder="0" min="0">
+        <span class="field-note">Días de plazo objeto de la controversia (si aplica)</span>
+      </div>
+      <div class="field"><label>Plazo reconocido en decisión (días)</label>
+        <input type="number" id="ct-plazo-rec" placeholder="0" min="0">
+        <span class="field-note">Completar al obtener decisión o laudo</span>
+      </div>
+    </div>
+
+    <div class="sdiv mb">IV. Fechas y documentos del procedimiento <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Directiva 6.2: todos los plazos en d.h. salvo indicación expresa</span></div>
+    <div class="fg fg-4 mb">
+      <div class="field"><label>Fecha de ocurrencia del hecho <span class="req">*</span></label><input type="date" id="ct-fec-oc"></div>
+      <div class="field span2"><label>Documento de la petición (carta / escrito al Centro) <span class="art">Dir. 7.12</span></label>
+        <input type="text" id="ct-doc-pres" placeholder="Carta N°... / Escrito N°...">
+        <span class="field-note">Código del documento con que se presentó la petición al Centro</span>
+      </div>
+      <div class="field"><label>Fecha presentación al Centro <span class="req">*</span> <span class="art">Dir. 7.12</span></label>
+        <input type="date" id="ct-fec-pres" oninput="calcCTFechas()">
+        <span class="field-note">Esta fecha = inicio formal de la controversia</span>
+      </div>
+    </div>
+    <div class="fg fg-4 mb">
+      <div class="field"><label>Documento de contestación (carta / escrito Entidad) <span class="art">Dir. 7.13</span></label>
+        <input type="text" id="ct-doc-contest" placeholder="Carta N°... / Escrito N°...">
+        <span class="field-note">Código del documento de descargo / contestación</span>
+      </div>
+      <div class="field"><label>Fecha contestación <span class="art">(límite: +3+15 d.h. · Dir. 7.13)</span></label>
+        <input type="date" id="ct-fec-contestacion" readonly>
+        <span class="field-note">Fecha límite calculada automáticamente</span>
+      </div>
+      <div class="field"><label>Documento programación audiencia <span class="art">Dir. 7.14</span></label>
+        <input type="text" id="ct-doc-aud" placeholder="Carta N°... / Comunicación N°...">
+        <span class="field-note">Código del documento con que se convocó la audiencia</span>
+      </div>
+      <div class="field"><label>Fecha audiencia <span class="art">(límite: +10 d.h. · Dir. 7.14)</span></label>
+        <input type="date" id="ct-fec-audiencia" readonly>
+        <span class="field-note">Fecha límite calculada automáticamente</span>
+      </div>
+    </div>
+    <div class="fg fg-4 mb">
+      <div class="field"><label>Documento de la decisión JRD <span class="art">Dir. 7.16</span></label>
+        <input type="text" id="ct-doc-dec" placeholder="Decisión N°... / Laudo N°...">
+        <span class="field-note">Código o número de la decisión emitida por la JRD</span>
+      </div>
+      <div class="field"><label>Fecha decisión JRD emitida</label>
+        <input type="date" id="ct-fec-dec">
+      </div>
+      <div class="field"><label>F. límite decisión al Centro <span class="art">(+15 d.h. · Dir. 7.16)</span></label>
+        <input type="date" id="ct-fec-lim" readonly>
+        <span class="field-note">Decisión fuera de plazo = ineficaz (Dir. 7.16)</span>
+      </div>
+      <div class="field"><label>F. límite notificación partes <span class="art">(+3 d.h. · Dir. 7.16)</span></label>
+        <input type="date" id="ct-fec-notif" readonly>
+      </div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Fecha recepción de obra</label>
+        <input type="date" id="ct-fec-recepcion">
+        <span class="field-note">Referencia para plazo de arbitraje — 30 d.h. desde esta fecha (Art. 251.3 RLCE)</span>
+      </div>
+      <div class="field"><label>Resultado <span class="req">*</span></label>
+        <select id="ct-resultado">
+          <option value="">-- Seleccionar --</option>
+          <option>EN TRÁMITE</option>
+          <option>FAVORABLE</option>
+          <option>DESFAVORABLE</option>
+          <option>PARCIALMENTE FAVORABLE</option>
+          <option>DECISIÓN INEFICAZ – fuera de plazo (Dir. 7.16)</option>
+          <option>SOMETIDO A ARBITRAJE (Art. 251.3)</option>
+          <option>DESISTIDO</option>
+          <option>TRANSADO</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cuadro informativo de plazos Directiva 012-2019 -->
+    <div style="background:#FEF0E7;border:1px solid #F5C4B3;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:#7A3205;line-height:1.85;">
+      <strong>⏱ Plazos del procedimiento JRD según Directiva N° 012-2019-OSCE/CD:</strong><br>
+      <span style="display:inline-block;min-width:360px;">① Contratista/Entidad presenta petición al Centro (5 requisitos mínimos)</span><span style="font-weight:600;">→ Inicio de la controversia (Dir. 7.12)</span><br>
+      <span style="display:inline-block;min-width:360px;">② Centro traslada petición a la otra parte</span><span style="font-weight:600;">→ dentro de los 3 d.h. de recibida (Dir. 7.13)</span><br>
+      <span style="display:inline-block;min-width:360px;">③ Parte contraria contesta al Centro</span><span style="font-weight:600;">→ dentro de los 15 d.h. de notificada (Dir. 7.13)</span><br>
+      <span style="display:inline-block;min-width:360px;">④ Audiencia (si la JRD lo determina o alguna parte lo solicita)</span><span style="font-weight:600;">→ dentro de los 10 d.h. de la contestación (Dir. 7.14)</span><br>
+      <span style="display:inline-block;min-width:360px;">⑤ JRD emite decisión y la notifica al Centro</span><span style="font-weight:600;">→ dentro de los 15 d.h. de la última sesión (Dir. 7.16)</span><br>
+      <span style="display:inline-block;min-width:360px;">⑥ Centro notifica decisión a las partes</span><span style="font-weight:600;">→ dentro de los 3 d.h. de recibida (Dir. 7.16)</span><br>
+      <span style="display:inline-block;min-width:360px;">⑦ Cumplimiento obligatorio e inmediato de la decisión</span><span style="font-weight:600;">→ desde su notificación (Art. 250 RLCE)</span><br>
+      <span style="display:inline-block;min-width:360px;">⑧ Si la parte disconforme quiere ir a arbitraje</span><span style="font-weight:600;">→ 30 d.h. desde recepción de la obra (Art. 251.3 RLCE)</span><br>
+      <span style="display:inline-block;min-width:360px;">⑨ Si la decisión fue notificada fuera del plazo del paso ⑤</span><span style="font-weight:600;">→ INEFICAZ; arbitraje en 30 d.h. de vencido ese plazo (Dir. 7.16)</span><br>
+      <span id="ct-aviso-plazos" style="display:none;color:#C00000;font-weight:600;margin-top:4px;"></span>
+    </div>
+
+    <div class="sdiv mb">V. Escritos y memoriales presentados <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Dir. 7.12 y 7.13</span></div>
+    <div id="escritos-list" class="dyn-list mb">
+      <div class="dyn-empty">Sin escritos registrados</div>
+    </div>
+    <div class="dyn-add-row mb">
+      <div class="field" style="flex:1"><label>Fecha</label><input type="date" id="escrito-fecha"></div>
+      <div class="field" style="flex:2"><label>Tipo de escrito</label>
+        <select id="escrito-tipo">
+          <option value="">-- Tipo --</option>
+          <option>Petición al Centro (Dir. 7.12)</option>
+          <option>Contestación de la petición (Dir. 7.13)</option>
+          <option>Solicitud de audiencia (Dir. 7.14)</option>
+          <option>Documentos adicionales requeridos por JRD</option>
+          <option>Memorial / alegatos de parte</option>
+          <option>Solicitud corrección/aclaración decisión (Dir. 7.17)</option>
+          <option>Recurso de anulación de laudo</option>
+          <option>Otro escrito</option>
+        </select>
+      </div>
+      <div class="field" style="flex:2"><label>Descripción / referencia</label><input type="text" id="escrito-desc" placeholder="Ref. documento o resumen..."></div>
+      <button class="btn-dyn-add" onclick="addEscrito()">+ Agregar</button>
+    </div>
+
+    <div class="sdiv mb">VI. Visitas y audiencias <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Dir. 7.9, 7.10 y 7.14</span></div>
+    <div id="audiencias-list" class="dyn-list mb">
+      <div class="dyn-empty">Sin visitas/audiencias registradas</div>
+    </div>
+    <div class="dyn-add-row mb">
+      <div class="field" style="flex:1"><label>Fecha</label><input type="date" id="aud-fecha"></div>
+      <div class="field" style="flex:2"><label>Tipo</label>
+        <select id="aud-tipo">
+          <option value="">-- Tipo --</option>
+          <option>Visita periódica a la obra (Dir. 7.9)</option>
+          <option>Audiencia – exposición de posiciones (Dir. 7.14)</option>
+          <option>Audiencia – aclaraciones JRD (Dir. 7.14)</option>
+          <option>Reunión de seguimiento (Dir. 7.9)</option>
+          <option>Función consultiva (Dir. 7.6)</option>
+          <option>Otra diligencia</option>
+        </select>
+      </div>
+      <div class="field" style="flex:2"><label>Resultado / acuerdos</label><input type="text" id="aud-resultado" placeholder="Resumen de lo actuado, acuerdos, próximas acciones..."></div>
+      <button class="btn-dyn-add" onclick="addAudiencia()">+ Agregar</button>
+    </div>
+
+    <div class="sdiv mb">VII. Acciones post-decisión y seguimiento</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Acción post-decisión</label><input type="text" id="ct-accion" placeholder="Ej: Cumplimiento voluntario, ejecución de laudo, inicio de arbitraje (Art. 251.3)..."></div>
+      <div class="field"><label>Observaciones / seguimiento</label><textarea id="ct-obs" rows="2" placeholder="Notas adicionales, estrategia, riesgos, acciones pendientes..."></textarea></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="cancelEdit('ct');resetForm('ct')">Limpiar</button>
+      <button class="btn btn-save-edit" id="btn-save-edit-ct" style="display:none" onclick="saveEdit('ct')">💾 Guardar cambios</button>
+      <button class="btn btn-primary-ct" id="btn-add-ct" onclick="addRecord('ct')">+ Agregar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="records-card">
+  <div class="records-head">
+    <div class="records-title" id="rtitle-ct">Registros (0)</div>
+    <div class="records-actions">
+      <button class="btn btn-ghost" style="font-size:10px;" onclick="clearAll('ct')">Limpiar todo</button>
+      <button class="btn btn-export" onclick="exportExcel('ct')">⬇ Exportar Excel</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr>
+      <th>N°</th><th>Código</th><th>Tipo</th><th>Materia</th><th>Monto Disputa</th>
+      <th>F. Presentación Centro</th><th>F. Límite Decisión</th><th>Monto Reconocido</th><th>Resultado</th><th>Últ. mod.</th><th>Acciones</th>
+    </tr></thead>
+    <tbody id="tbody-ct"><tr><td colspan="11"><div class="empty-state">Sin registros aún</div></td></tr></tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /sec-ct -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- AD – ADICIONALES DE OBRA                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="sec-ad" class="section">
+
+<div class="proc-banner proc-banner-ad">
+  <div class="proc-icon">➕</div>
+  <div style="flex:1">
+    <div class="proc-title">Prestaciones Adicionales de Obra</div>
+    <div class="proc-sub">Anotación en cuaderno de obra (contratista o supervisor). Supervisor ratifica a la Entidad en 5 días (Art. 205.2). Contratista presenta expediente técnico del adicional en 15 días (Art. 205.4). Hasta 15%: Titular de Entidad. Mayor a 15%: CGR autoriza en 15 d.h. (Art. 206.2). Silencio CGR = autorización automática (Art. 206.3).</div>
+    <div class="proc-arts">
+      <span class="art-pill">Art. 205 RLCE</span><span class="art-pill">Art. 206 RLCE</span>
+      <span class="art-pill">Art. 207 RLCE</span>
+    </div>
+  </div>
+  <div class="proc-actions">
+    <button class="btn btn-draft" onclick="saveDraft('ad')">💾 Borrador</button>
+    <button class="btn btn-export" onclick="exportExcel('ad')">⬇ Excel</button>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step"><div class="step-box"><span class="step-num">01</span><span class="step-lbl">Anotación en cuaderno de obra</span><span class="step-days">Residente o supervisor · Art. 205.2</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">02</span><span class="step-lbl">Informe supervisor a la Entidad</span><span class="step-days">5 días · Art. 205.2</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">03</span><span class="step-lbl">Expediente técnico del adicional</span><span class="step-days">15 días · Art. 205.4</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">04</span><span class="step-lbl">Evaluación Entidad</span><span class="step-days">Art. 205.5</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">05</span><span class="step-lbl">Resolución Titular Entidad</span><span class="step-days">Hasta 15% · Art. 205.1</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">06</span><span class="step-lbl">Autorización CGR</span><span class="step-days">&gt;15% · 15 d.h. · Art. 206.2</span></div><span class="step-arrow">›</span></div>
+  <div class="step"><div class="step-box"><span class="step-num">07</span><span class="step-lbl">Ejecución y liquidación</span><span class="step-days">Art. 207 RLCE</span></div></div>
+</div>
+
+<!-- Monto base config -->
+<div class="form-card" style="margin-bottom:14px;">
+  <div class="form-card-head fch-ad" style="font-size:10px;">⚙ Configuración – Monto Contractual Base (necesario para cálculo del % acumulado)</div>
+  <div class="form-body" style="padding:12px 18px;">
+    <div class="fg fg-3">
+      <div class="field">
+        <label>Monto contractual base (S/) <span class="req">*</span></label>
+        <input type="number" id="ad-montobase" placeholder="0.00" min="0" step="0.01" oninput="saveMontoBase();recalcAdStats()">
+        <span class="field-note">Ingresa el monto para calcular % acumulado y alerta CGR automáticamente</span>
+      </div>
+      <div class="field" style="justify-content:flex-end;padding-top:18px;">
+        <div id="ad-alerta" style="display:none;padding:8px 12px;border-radius:7px;font-size:11px;font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="draft-bar-ad" class="draft-bar" style="display:none">
+  ⏱ Borrador recuperado. Completa y guarda.
+  <button onclick="clearDraft('ad')">Descartar</button>
+</div>
+<div id="edit-banner-ad" class="edit-banner" style="display:none">
+  ✏️ Modo edición — registro <strong id="edit-codigo-ad"></strong>.
+  <button onclick="cancelEdit('ad')">Cancelar</button>
+</div>
+
+<div class="stats-row" id="stats-ad"></div>
+
+<div class="form-card">
+  <div class="form-card-head fch-ad" id="form-head-ad">➕ Nuevo Adicional de Obra</div>
+  <div class="form-body">
+
+    <div class="sdiv mb">I. Identificación</div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Código <span class="req">*</span></label><input type="text" id="ad-codigo" placeholder="ADIC-001"></div>
+      <div class="field"><label>Tipo de prestación <span class="req">*</span> <span class="art">Art. 205-206</span></label>
+        <select id="ad-tipo">
+          <option value="">-- Seleccionar --</option>
+          <option>Adicional de obra – hasta 15% (Art. 205 RLCE)</option>
+          <option>Adicional de obra – mayor 15% con CGR (Art. 206 RLCE)</option>
+          <option>Mayores metrados – sistema precios unitarios (Art. 205.10)</option>
+          <option>Adicional de emergencia – CGR previo al pago (Art. 206.1)</option>
+          <option>Reducción de prestaciones (Art. 199.6 RLCE)</option>
+          <option>Adicional de supervisión</option>
+        </select>
+      </div>
+      <div class="field"><label>N° contrato</label><input type="text" id="ad-ncontrato" placeholder="Contrato N°..."></div>
+    </div>
+
+    <div class="sdiv mb">II. Descripción técnica</div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Descripción / partidas involucradas <span class="req">*</span></label>
+        <textarea id="ad-desc" rows="3" placeholder="Describir las partidas adicionales, ubicación en obra, metrados, justificación técnica de la necesidad..."></textarea>
+      </div>
+      <div class="field"><label>Causal / origen de la necesidad</label>
+        <textarea id="ad-causal" rows="3" placeholder="Ej: Partidas no previstas en el expediente técnico, condiciones del suelo distintas, errores en el expediente, situaciones imprevisibles..."></textarea>
+      </div>
+    </div>
+
+    <div class="sdiv mb">III. Montos</div>
+    <div class="fg fg-4 mb">
+      <div class="field"><label>Monto solicitado (S/) <span class="req">*</span></label><input type="number" id="ad-montosol" placeholder="0.00" min="0" step="0.01" oninput="calcPctAd()"></div>
+      <div class="field"><label>% respecto al contrato <span class="art">(auto)</span></label><input type="text" id="ad-pct" readonly placeholder="—"></div>
+      <div class="field"><label>Monto aprobado (S/)</label><input type="number" id="ad-montoaprob" placeholder="0.00" min="0" step="0.01"><span class="field-note">Completar al aprobar</span></div>
+      <div class="field"><label>Plazo adicional asociado (días) <span class="art">Art. 169</span></label><input type="number" id="ad-plazo-dias" placeholder="0" min="0"><span class="field-note">Si genera AP asociada</span></div>
+    </div>
+
+    <div class="sdiv mb">IV. Sustento documental <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 205.2 y 205.4 RLCE</span></div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Asiento cuaderno de obra N° <span class="req">*</span></label><input type="text" id="ad-asiento" placeholder="Asiento N°... del ..."></div>
+      <div class="field"><label>Informe técnico supervisor/inspector <span class="req">*</span> <span class="art">Art. 205.2 · 5 días</span></label><input type="text" id="ad-inf-sup" placeholder="Informe N°..."></div>
+      <div class="field"><label>Informe técnico residente <span class="art">Art. 205.2</span></label><input type="text" id="ad-inf-res" placeholder="Informe N°..."></div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>Expediente técnico del adicional <span class="art">Art. 205.4 · 15 días</span></label><input type="text" id="ad-exp-tec" placeholder="N° expediente técnico adicional"></div>
+      <div class="field"><label>Presupuesto adicional (incluye GG, utilidad, IGV) <span class="art">Art. 205.9</span></label><input type="text" id="ad-presupuesto" placeholder="Ref. presupuesto adicional aprobado"></div>
+    </div>
+
+    <div class="sdiv mb">V. Fechas y aprobación escalonada <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Art. 205-206 RLCE · CGR: 15 d.h. (Art. 206.2) · Silencio CGR = autorizado (Art. 206.3)</span></div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Fecha anotación cuaderno de obra <span class="req">*</span></label><input type="date" id="ad-fec-sol" oninput="calcADFechas()"></div>
+      <div class="field"><label>Fecha límite informe supervisor <span class="art">(+5 días · Art. 205.2)</span></label><input type="date" id="ad-fec-sup" readonly></div>
+      <div class="field"><label>Fecha límite expediente técnico <span class="art">(+15 días · Art. 205.4)</span></label><input type="date" id="ad-fec-lim-ent" readonly></div>
+    </div>
+    <div class="fg fg-3 mb">
+      <div class="field"><label>Fecha resolución aprobatoria Titular Entidad</label><input type="date" id="ad-fec-aprob"></div>
+      <div class="field"><label>Fecha presentación a CGR <span class="art">si &gt;15%</span></label><input type="date" id="ad-fec-cgr" oninput="calcADFecCGR()"><span class="field-note">Solo si supera el 15% del monto contractual</span></div>
+      <div class="field"><label>Fecha límite pronunciamiento CGR <span class="art">(+15 d.h. · Art. 206.2)</span></label><input type="date" id="ad-fec-cgr-lim" readonly><span class="field-note">Silencio = autorización (Art. 206.3)</span></div>
+    </div>
+    <div class="fg fg-2 mb">
+      <div class="field"><label>N° resolución aprobación</label><input type="text" id="ad-nresol" placeholder="Resolución N°..."></div>
+      <div class="field"><label>Estado <span class="req">*</span></label>
+        <select id="ad-estado">
+          <option value="">-- Seleccionar --</option>
+          <option>EN EVALUACIÓN</option>
+          <option>EN EVALUACIÓN CGR</option>
+          <option>APROBADO – Titular Entidad</option>
+          <option>APROBADO – Con autorización CGR</option>
+          <option>APROBADO – Silencio CGR (Art. 206.3)</option>
+          <option>OBSERVADO</option>
+          <option>RECHAZADO</option>
+          <option>RETIRADO</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sdiv mb">VI. Rondas de observaciones <span style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none"> — Cada observación tiene: notificación de la Entidad y levantamiento del contratista</span></div>
+    <div id="obs-rondas-list" class="dyn-list mb">
+      <div class="dyn-empty">Sin observaciones registradas</div>
+    </div>
+    <div class="dyn-add-row mb" style="flex-direction:column;gap:10px;">
+      <div style="font-size:10px;font-weight:600;color:var(--dgrey);letter-spacing:.04em;text-transform:uppercase;">Nueva observación</div>
+      <div class="fg fg-2" style="width:100%;">
+        <div class="field"><label>Descripción de la observación</label>
+          <textarea id="obs-descripcion" rows="2" placeholder="Describir la observación formulada por la Entidad / Supervisor..."></textarea>
+        </div>
+        <div class="field"><label>Observación formulada por</label>
+          <select id="obs-por">
+            <option value="">-- Quién observa --</option>
+            <option>Entidad</option>
+            <option>Supervisor / Inspector</option>
+            <option>CGR</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg fg-4" style="width:100%;">
+        <div class="field"><label>Carta / doc. de notificación <span style="color:var(--orange);font-size:9px;">(Entidad notifica observación)</span></label>
+          <input type="text" id="obs-carta-notif" placeholder="Carta N°...">
+        </div>
+        <div class="field"><label>Fecha notificación observación</label>
+          <input type="date" id="obs-fec-notif">
+        </div>
+        <div class="field"><label>Carta / doc. levantamiento <span style="color:var(--green);font-size:9px;">(Contratista levanta)</span></label>
+          <input type="text" id="obs-carta-levant" placeholder="Carta N°...">
+        </div>
+        <div class="field"><label>Fecha levantamiento</label>
+          <input type="date" id="obs-fec-levant">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn-dyn-add" onclick="addObsRonda()">+ Agregar observación</button>
+      </div>
+    </div>
+
+    <div class="sdiv mb">VII. Seguimiento general</div>
+    <div class="fg mb">
+      <div class="field"><label>Observaciones / acciones pendientes</label>
+        <textarea id="ad-obs" rows="2" placeholder="Acciones a tomar, seguimiento, riesgos..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="cancelEdit('ad');resetForm('ad')">Limpiar</button>
+      <button class="btn btn-save-edit" id="btn-save-edit-ad" style="display:none" onclick="saveEdit('ad')">💾 Guardar cambios</button>
+      <button class="btn btn-primary-ad" id="btn-add-ad" onclick="addRecord('ad')">+ Agregar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="records-card">
+  <div class="records-head">
+    <div class="records-title" id="rtitle-ad">Registros (0)</div>
+    <div class="records-actions">
+      <button class="btn btn-ghost" style="font-size:10px;" onclick="clearAll('ad')">Limpiar todo</button>
+      <button class="btn btn-export" onclick="exportExcel('ad')">⬇ Exportar Excel</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr>
+      <th>N°</th><th>Código</th><th>Tipo</th><th>Descripción</th><th>Monto Sol. (S/)</th>
+      <th>% Contrato</th><th>Monto Aprob. (S/)</th><th>F. Solicitud</th><th>Estado</th><th>Últ. mod.</th><th>Acciones</th>
+    </tr></thead>
+    <tbody id="tbody-ad"><tr><td colspan="11"><div class="empty-state">Sin registros aún</div></td></tr></tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /sec-ad -->
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="sec-dash" class="section">
+  <div class="dash-header">
+    <div><div class="dash-title">Dashboard Ejecutivo</div><div class="dash-sub">Actualización automática · AP | Controversias | Adicionales</div></div>
+    <button class="btn" style="background:#FFD966;color:var(--navy);font-size:11px;font-weight:600;" onclick="refreshDash()">⟳ Actualizar</button>
+  </div>
+  <div class="kpi-row" id="dash-kpis"></div>
+  <div class="dash-grid">
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Estado – Ampliaciones de Plazo</div><div class="chart-sub">Distribución por resultado</div></div></div><div class="chart-body"><canvas id="ch-ap-estado" height="200"></canvas><div class="legend-row" id="leg-ap"></div></div></div>
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Estado – Controversias / JRD</div><div class="chart-sub">Distribución por resultado</div></div></div><div class="chart-body"><canvas id="ch-ct-estado" height="200"></canvas><div class="legend-row" id="leg-ct"></div></div></div>
+  </div>
+  <div class="dash-full">
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Montos: Solicitado vs. Aprobado / Reconocido (S/)</div><div class="chart-sub">Controversias y Adicionales</div></div></div><div class="chart-body"><canvas id="ch-montos" height="140"></canvas></div></div>
+  </div>
+  <div class="dash-grid">
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">% Acumulado Adicionales vs. Límite CGR</div><div class="chart-sub">Art. 175 RLCE – Tope: 15%</div></div></div><div class="chart-body"><div class="gauge-wrap" id="gauge-ad"></div></div></div>
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Días solicitados vs. aprobados – AP</div><div class="chart-sub">Por ampliación de plazo</div></div></div><div class="chart-body"><canvas id="ch-ap-dias" height="200"></canvas></div></div>
+  </div>
+  <div class="dash-full">
+    <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Línea de tiempo – Plazos y vencimientos</div><div class="chart-sub">Solicitudes EN TRÁMITE / EN EVALUACIÓN ordenadas por fecha límite</div></div></div>
+    <div class="chart-body" style="padding:0;"><div style="overflow-x:auto;"><table class="tl-table"><thead><tr><th>Tipo</th><th>Código</th><th>Descripción</th><th>F. Presentación</th><th>F. Límite</th><th>Días restantes</th><th>Estado</th></tr></thead><tbody id="tl-tbody"></tbody></table></div></div></div>
+  </div>
+</div><!-- /sec-dash -->
+
+</main>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIGURACIÓN GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════════
+// INSTRUCCIÓN: Reemplaza esta URL con la de tu Apps Script desplegado
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzNSNLig7wRORxhB37C6x7ddmIHw7TxH1em7dhXIeszyrjkPkk_6hKgH328z7ZtY79S/exec';
+const SYNC_ENABLED = GAS_URL !== 'https://script.google.com/macros/s/AKfycbzNSNLig7wRORxhB37C6x7ddmIHw7TxH1em7dhXIeszyrjkPkk_6hKgH328z7ZtY79S/exec';
+
+// ── Indicador de sincronización ──────────────
+function setSyncStatus(status) {
+  // status: 'syncing' | 'ok' | 'error' | 'offline'
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const map = {
+    syncing: { icon:'⟳', text:'Sincronizando...', color:'#2E75B6' },
+    ok:      { icon:'✓', text:'Sincronizado',     color:'#375623' },
+    error:   { icon:'⚠', text:'Error de sync',    color:'#C00000' },
+    offline: { icon:'◌', text:'Solo local',        color:'#7F7F7F' },
+  };
+  const s = map[status] || map.offline;
+  el.innerHTML = `<span style="color:${s.color};font-weight:600;font-size:11px;">${s.icon} ${s.text}</span>`;
+}
+
+// ── Guardar en Google Sheets ──────────────────
+async function syncToSheets(section, data) {
+  if (!SYNC_ENABLED) return;
+  setSyncStatus('syncing');
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'save', section, data })
+    });
+    setSyncStatus('ok');
+    setTimeout(()=>setSyncStatus('ok'), 2000);
+  } catch(e) {
+    setSyncStatus('error');
+    console.warn('Sync error:', e);
+  }
+}
+
+// ── Cargar desde Google Sheets al iniciar ─────
+async function loadFromSheets() {
+  if (!SYNC_ENABLED) { setSyncStatus('offline'); return; }
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(GAS_URL + '?action=load', { mode: 'cors' });
+    const json = await res.json();
+    if (json.ap) { store.ap = json.ap; localStorage.setItem('rlce_ap', JSON.stringify(json.ap)); }
+    if (json.ct) { store.ct = json.ct; localStorage.setItem('rlce_ct', JSON.stringify(json.ct)); }
+    if (json.ad) { store.ad = json.ad; localStorage.setItem('rlce_ad', JSON.stringify(json.ad)); }
+    if (json.montobase) localStorage.setItem('rlce_montobase', json.montobase);
+    setSyncStatus('ok');
+    ['ap','ct','ad'].forEach(t => { renderTable(t); renderStats(t); });
+    if (document.getElementById('sec-dash').classList.contains('active')) refreshDash();
+  } catch(e) {
+    setSyncStatus('error');
+    console.warn('Load from Sheets error:', e);
+  }
+}
+
+// ═══════════════════════════════════════════
+// STORE + PERSIST (localStorage + Sheets)
+// ═══════════════════════════════════════════
+const loadStore = () => {
+  const load = k => { try{ return JSON.parse(localStorage.getItem('rlce_'+k)||'[]'); }catch(e){ return []; } };
+  return { ap: load('ap'), ct: load('ct'), ad: load('ad') };
+};
+const saveStore = t => {
+  localStorage.setItem('rlce_'+t, JSON.stringify(store[t]));
+  // Sync full store to Sheets on every save
+  syncToSheets('all', { ap: store.ap, ct: store.ct, ad: store.ad,
+    montobase: localStorage.getItem('rlce_montobase')||'' });
+};
+const store = loadStore();
+
+const editState = { ap: null, ct: null, ad: null }; // index being edited, or null
+const escritos = []; // temp list for current CT form
+const audiencias = [];
+const obsRondas = []; // temp list for current AD form - rondas de observaciones
+
+// ═══════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════
+function switchTab(t) {
+  ['ap','ct','ad','dash'].forEach(s => {
+    document.getElementById('sec-'+s).classList.toggle('active', s===t);
+    document.querySelectorAll('.tab-'+s).forEach(b => b.classList.toggle('active', s===t));
+  });
+  if (t==='dash') refreshDash();
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show '+type;
+  clearTimeout(el._t); el._t = setTimeout(() => el.className='', 3000);
+}
+
+// ═══════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════
+const addDays = (s, n) => { if(!s) return ''; const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const fmtDate = s => { if(!s||s==='—') return s||''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+const fmtM = n => n ? 'S/ '+parseFloat(n).toLocaleString('es-PE',{minimumFractionDigits:2}) : '';
+const today = () => new Date().toISOString().slice(0,10);
+const nowStr = () => { const d=new Date(); return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; };
+
+// ═══════════════════════════════════════════
+// AP – FIELD IDS
+// ═══════════════════════════════════════════
+const AP_FIELDS = ['ap-codigo','ap-carta-pres','ap-fec-pres',
+  'ap-causal','ap-descripcion',
+  'ap-fecha-inicio','ap-fecha-fin','ap-dias-rc','ap-cod-cronograma','ap-impacto',
+  'ap-asiento-inicio','ap-asiento-cierre','ap-documento','ap-inf-residente',
+  'ap-dias','ap-fec-lim','ap-fec-lim-entidad',
+  'ap-estado','ap-dias-ap','ap-nresol','ap-fec-resp',
+  'ap-addenda','ap-nueva-fecha','ap-obs'];
+
+const CT_FIELDS = ['ct-codigo','ct-tipo',
+  'ct-materia','ct-fundamento',
+  'ct-monto','ct-montorec','ct-plazo-disp','ct-plazo-rec',
+  'ct-fec-oc','ct-doc-pres','ct-fec-pres',
+  'ct-doc-contest','ct-fec-contestacion',
+  'ct-doc-aud','ct-fec-audiencia',
+  'ct-doc-dec','ct-fec-dec','ct-fec-lim','ct-fec-notif',
+  'ct-fec-recepcion','ct-resultado','ct-accion','ct-obs'];
+
+const AD_FIELDS = ['ad-codigo','ad-tipo','ad-ncontrato','ad-desc','ad-causal',
+  'ad-montosol','ad-pct','ad-montoaprob','ad-plazo-dias',
+  'ad-asiento','ad-inf-sup','ad-inf-res','ad-exp-tec','ad-presupuesto',
+  'ad-fec-sol','ad-fec-sup','ad-fec-lim-ent','ad-fec-cgr','ad-fec-cgr-lim',
+  'ad-fec-aprob','ad-nresol','ad-estado','ad-obs'];
+
+// ═══════════════════════════════════════════
+// AUTO CALCS
+// ═══════════════════════════════════════════
+function calcAPFecLim() {
+  const pres = document.getElementById('ap-fec-pres').value;
+  if (!pres) return;
+  // 5 d.h. ≈ 7 d.c. para supervisor (Art. 198.2)
+  const limSup = addDays(pres, 7);
+  document.getElementById('ap-fec-lim').value = limSup;
+  // 20 d.h. ≈ 28 d.c. para silencio positivo (Art. 198.4)
+  const limEnt = addDays(pres, 28);
+  document.getElementById('ap-fec-lim-entidad').value = limEnt;
+  // Nota informativa
+  const note = document.getElementById('ap-lim-note');
+  const td = today();
+  if (limEnt < td) {
+    note.textContent = '⚠ Plazo de la Entidad vencido el ' + fmtDate(limEnt) + ' — verificar silencio positivo (Art. 198.4)';
+    note.style.color = '#C00000';
+  } else {
+    note.textContent = '📅 La Entidad debe resolver antes del ' + fmtDate(limEnt);
+    note.style.color = '#375623';
+  }
+  // Aviso en el cuadro de plazos
+  const aviso = document.getElementById('ap-aviso-plazos');
+  if (aviso) {
+    if (limEnt < td) {
+      aviso.style.display = 'block';
+      aviso.textContent = '⚠ El plazo de 20 d.h. venció el ' + fmtDate(limEnt) + '. Si no hubo pronunciamiento, la ampliación se considera APROBADA por silencio (Art. 198.4).';
+    } else {
+      aviso.style.display = 'none';
+    }
+  }
+}
+function calcCTFechas() {
+  const pres = document.getElementById('ct-fec-pres').value;
+  if (!pres) return;
+  // Todos en días hábiles → multiplicamos x1.4 para aproximar a d.c.
+  // ① Traslado: +3 d.h. ≈ +4 d.c.
+  // ② Contestación: +15 d.h. desde traslado ≈ +21 d.c. desde presentación
+  const fecContest = addDays(pres, 25);   // 3+15 d.h. ≈ 25 d.c.
+  document.getElementById('ct-fec-contestacion').value = fecContest;
+  // ③ Audiencia: +10 d.h. desde contestación ≈ +14 d.c.
+  const fecAud = addDays(fecContest, 14);
+  document.getElementById('ct-fec-audiencia').value = fecAud;
+  // ④ Decisión JRD al Centro: +15 d.h. desde última sesión ≈ +21 d.c.
+  const fecLim = addDays(fecAud, 21);
+  document.getElementById('ct-fec-lim').value = fecLim;
+  // ⑤ Notificación partes: +3 d.h. ≈ +4 d.c.
+  const fecNotif = addDays(fecLim, 4);
+  document.getElementById('ct-fec-notif').value = fecNotif;
+  // Aviso si ya venció el plazo de decisión
+  const aviso = document.getElementById('ct-aviso-plazos');
+  if (aviso && fecLim < today()) {
+    aviso.style.display = 'block';
+    aviso.textContent = '⚠ El plazo de decisión JRD venció aprox. el ' + fmtDate(fecLim) + '. Si no se notificó en plazo, la decisión es INEFICAZ (Dir. 7.16). Verificar acuerdo expreso de prórroga antes de la recepción de obra.';
+  } else if (aviso) {
+    aviso.style.display = 'none';
+  }
+}
+function calcADFechas() {
+  const anotacion = document.getElementById('ad-fec-sol').value;
+  if (!anotacion) return;
+  document.getElementById('ad-fec-sup').value     = addDays(anotacion, 5);  // 5 días Art.205.2
+  document.getElementById('ad-fec-lim-ent').value = addDays(anotacion, 15); // 15 días Art.205.4
+}
+function calcADFecCGR() {
+  const fecCGR = document.getElementById('ad-fec-cgr').value;
+  if (!fecCGR) return;
+  document.getElementById('ad-fec-cgr-lim').value = addDays(fecCGR, 21); // 15 d.h. ≈ 21 d.c.
+}
+function calcPctAd() {
+  const base = parseFloat(localStorage.getItem('rlce_montobase')||'0');
+  const sol = parseFloat(document.getElementById('ad-montosol').value)||0;
+  document.getElementById('ad-pct').value = base>0 && sol>0 ? (sol/base*100).toFixed(2)+'%' : '';
+}
+function saveMontoBase() { localStorage.setItem('rlce_montobase', document.getElementById('ad-montobase').value); }
+
+// ═══════════════════════════════════════════
+// AP PROCEDURE STEPS VISUAL
+// ═══════════════════════════════════════════
+function updateAPSteps() {
+  const estado = document.getElementById('ap-estado').value;
+  const steps = document.querySelectorAll('[id^="step-ap-"]');
+  steps.forEach(s => { s.classList.remove('done','active-step','alert'); });
+  if (!estado) return;
+  const map = { 'EN TRÁMITE':4, 'APROBADO':6,'APROBADO PARCIAL':6,'SILENCIO POSITIVO':6,'DENEGADO':5,'RETIRADO':3 };
+  const active = map[estado]||4;
+  for (let i=1; i<=6; i++) {
+    const s = document.getElementById('step-ap-'+i);
+    if (!s) continue;
+    if (i < active) s.classList.add('done');
+    else if (i === active) s.classList.add(estado==='DENEGADO'?'alert':'active-step');
+  }
+}
+
+// ═══════════════════════════════════════════
+// DYNAMIC LISTS – Escritos y Audiencias
+// ═══════════════════════════════════════════
+function renderEscritos(list) {
+  const el = document.getElementById('escritos-list');
+  if (!list.length) { el.innerHTML='<div class="dyn-empty">Sin escritos registrados</div>'; return; }
+  el.innerHTML = list.map((e,i)=>`<div class="dyn-item"><span style="min-width:80px;color:var(--muted)">${fmtDate(e.fecha)}</span><strong style="min-width:160px;">${e.tipo}</strong><span style="flex:1">${e.desc}</span><button class="dyn-item-del" onclick="delEscrito(${i})">✕</button></div>`).join('');
+}
+function addEscrito() {
+  const f=document.getElementById('escrito-fecha').value, t=document.getElementById('escrito-tipo').value, d=document.getElementById('escrito-desc').value.trim();
+  if(!f||!t){toast('Completa fecha y tipo del escrito','err');return;}
+  escritos.push({fecha:f,tipo:t,desc:d});
+  renderEscritos(escritos);
+  document.getElementById('escrito-fecha').value=''; document.getElementById('escrito-tipo').value=''; document.getElementById('escrito-desc').value='';
+}
+function delEscrito(i){ escritos.splice(i,1); renderEscritos(escritos); }
+
+function renderAudiencias(list) {
+  const el = document.getElementById('audiencias-list');
+  if (!list.length) { el.innerHTML='<div class="dyn-empty">Sin audiencias registradas</div>'; return; }
+  el.innerHTML = list.map((a,i)=>`<div class="dyn-item"><span style="min-width:80px;color:var(--muted)">${fmtDate(a.fecha)}</span><strong style="min-width:160px;">${a.tipo}</strong><span style="flex:1">${a.resultado}</span><button class="dyn-item-del" onclick="delAudiencia(${i})">✕</button></div>`).join('');
+}
+function addAudiencia() {
+  const f=document.getElementById('aud-fecha').value, t=document.getElementById('aud-tipo').value, r=document.getElementById('aud-resultado').value.trim();
+  if(!f||!t){toast('Completa fecha y tipo de audiencia','err');return;}
+  audiencias.push({fecha:f,tipo:t,resultado:r});
+  renderAudiencias(audiencias);
+  document.getElementById('aud-fecha').value=''; document.getElementById('aud-tipo').value=''; document.getElementById('aud-resultado').value='';
+}
+function delAudiencia(i){ audiencias.splice(i,1); renderAudiencias(audiencias); }
+
+// ── Rondas de observaciones (AD) ─────────────────────────
+function renderObsRondas(list) {
+  const el = document.getElementById('obs-rondas-list');
+  if (!list.length) { el.innerHTML='<div class="dyn-empty">Sin observaciones registradas</div>'; return; }
+  el.innerHTML = list.map((o,i)=>`
+    <div class="dyn-item" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px;background:${i%2===0?'#FFFFFF':'#F8FAFC'};">
+      <div style="display:flex;align-items:center;gap:8px;width:100%;">
+        <span style="background:var(--orange);color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;flex-shrink:0;">OBS ${i+1}</span>
+        <span style="font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;">${o.por||''}</span>
+        <button class="dyn-item-del" style="margin-left:auto;" onclick="delObsRonda(${i})" title="Eliminar observación">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text);line-height:1.4;padding-left:4px;">${o.descripcion||'—'}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;">
+        <span style="color:var(--orange);">📩 Notif.: <strong>${o.carta_notif||'—'}</strong>${o.fec_notif?' · '+fmtDate(o.fec_notif):''}</span>
+        <span style="color:var(--green);">✅ Levant.: <strong>${o.carta_levant||'—'}</strong>${o.fec_levant?' · '+fmtDate(o.fec_levant):''}</span>
+      </div>
+    </div>`).join('');
+}
+function addObsRonda() {
+  const desc = document.getElementById('obs-descripcion').value.trim();
+  const por  = document.getElementById('obs-por').value;
+  if (!desc) { toast('Ingresa la descripción de la observación','err'); return; }
+  obsRondas.push({
+    descripcion:  desc,
+    por:          por,
+    carta_notif:  document.getElementById('obs-carta-notif').value.trim(),
+    fec_notif:    document.getElementById('obs-fec-notif').value,
+    carta_levant: document.getElementById('obs-carta-levant').value.trim(),
+    fec_levant:   document.getElementById('obs-fec-levant').value,
+  });
+  renderObsRondas(obsRondas);
+  ['obs-descripcion','obs-carta-notif','obs-fec-notif','obs-carta-levant','obs-fec-levant'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('obs-por').selectedIndex=0;
+}
+function delObsRonda(i){ obsRondas.splice(i,1); renderObsRondas(obsRondas); }
+
+// ═══════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════
+function validate(ids) {
+  let ok=true;
+  ids.forEach(id => { const el=document.getElementById(id); if(!el) return; const v=el.value.trim(); el.classList.toggle('err',!v); if(!v) ok=false; });
+  return ok;
+}
+
+// ═══════════════════════════════════════════
+// COLLECT RECORD
+// ═══════════════════════════════════════════
+function collectAP() {
+  return {
+    codigo: g('ap-codigo'), carta_pres: g('ap-carta-pres'), fec_pres: g('ap-fec-pres'),
+    causal: document.getElementById('ap-causal').options[document.getElementById('ap-causal').selectedIndex]?.text||'',
+    causal_val: g('ap-causal'), descripcion: g('ap-descripcion'),
+    fecha_inicio: g('ap-fecha-inicio'), fecha_fin: g('ap-fecha-fin'), dias_rc: g('ap-dias-rc'),
+    cod_cronograma: g('ap-cod-cronograma'), impacto: g('ap-impacto'),
+    asiento_inicio: g('ap-asiento-inicio'), asiento_cierre: g('ap-asiento-cierre'),
+    documento: g('ap-documento'), inf_residente: g('ap-inf-residente'),
+    dias: g('ap-dias'), fec_lim: g('ap-fec-lim'), fec_lim_entidad: g('ap-fec-lim-entidad'),
+    estado: g('ap-estado'), dias_ap: g('ap-dias-ap'), nresol: g('ap-nresol'), fec_resp: g('ap-fec-resp'),
+    addenda: g('ap-addenda'), nueva_fecha: g('ap-nueva-fecha'), obs: g('ap-obs'),
+    hist: [], mod: nowStr()
+  };
+}
+function collectCT() {
+  return {
+    codigo: g('ct-codigo'), tipo: g('ct-tipo'),
+    materia: g('ct-materia'), fundamento: g('ct-fundamento'),
+    monto: g('ct-monto'), montorec: g('ct-montorec'),
+    plazo_disp: g('ct-plazo-disp'), plazo_rec: g('ct-plazo-rec'),
+    fec_oc: g('ct-fec-oc'),
+    doc_pres: g('ct-doc-pres'), fec_pres: g('ct-fec-pres'),
+    doc_contest: g('ct-doc-contest'), fec_contestacion: g('ct-fec-contestacion'),
+    doc_aud: g('ct-doc-aud'), fec_audiencia: g('ct-fec-audiencia'),
+    doc_dec: g('ct-doc-dec'), fec_dec: g('ct-fec-dec'),
+    fec_lim: g('ct-fec-lim'), fec_notif: g('ct-fec-notif'),
+    fec_recepcion: g('ct-fec-recepcion'), resultado: g('ct-resultado'),
+    escritos: [...escritos], audiencias: [...audiencias],
+    accion: g('ct-accion'), obs: g('ct-obs'),
+    hist: [], mod: nowStr()
+  };
+}
+function collectAD() {
+  const base = parseFloat(localStorage.getItem('rlce_montobase')||'0');
+  const sol = parseFloat(g('ad-montosol'))||0;
+  return {
+    codigo: g('ad-codigo'), tipo: g('ad-tipo'), ncontrato: g('ad-ncontrato'),
+    desc: g('ad-desc'), causal: g('ad-causal'),
+    montosol: sol, pct: base>0 ? (sol/base*100).toFixed(2) : '',
+    montoaprob: g('ad-montoaprob'), plazo_dias: g('ad-plazo-dias'),
+    asiento: g('ad-asiento'), inf_sup: g('ad-inf-sup'), inf_res: g('ad-inf-res'),
+    exp_tec: g('ad-exp-tec'), presupuesto: g('ad-presupuesto'),
+    fec_sol: g('ad-fec-sol'), fec_sup: g('ad-fec-sup'), fec_lim_ent: g('ad-fec-lim-ent'),
+    fec_cgr: g('ad-fec-cgr'), fec_cgr_lim: g('ad-fec-cgr-lim'),
+    fec_aprob: g('ad-fec-aprob'), nresol: g('ad-nresol'), estado: g('ad-estado'), obs: g('ad-obs'),
+    obs_rondas: [...obsRondas],
+    hist: [], mod: nowStr()
+  };
+}
+function g(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
+
+// ═══════════════════════════════════════════
+// ADD RECORD
+// ═══════════════════════════════════════════
+function addRecord(t) {
+  if (t==='ap') {
+    if (!validate(['ap-codigo','ap-carta-pres','ap-fec-pres','ap-causal','ap-descripcion','ap-fecha-inicio','ap-asiento-inicio','ap-asiento-cierre','ap-dias','ap-estado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    store.ap.push(collectAP());
+    saveStore('ap'); renderTable('ap'); renderStats('ap'); clearDraftStore('ap'); resetForm('ap');
+    toast('Ampliación de plazo registrada ✓');
+  }
+  if (t==='ct') {
+    if (!validate(['ct-codigo','ct-tipo','ct-materia','ct-monto','ct-fec-oc','ct-fec-pres','ct-resultado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    store.ct.push(collectCT());
+    saveStore('ct'); renderTable('ct'); renderStats('ct'); clearDraftStore('ct'); resetForm('ct');
+    toast('Controversia registrada ✓');
+  }
+  if (t==='ad') {
+    if (!validate(['ad-codigo','ad-tipo','ad-desc','ad-montosol','ad-fec-sol','ad-estado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    store.ad.push(collectAD());
+    saveStore('ad'); renderTable('ad'); renderStats('ad'); recalcAdStats(); clearDraftStore('ad'); resetForm('ad');
+    toast('Adicional registrado ✓');
+  }
+}
+
+// ═══════════════════════════════════════════
+// EDIT
+// ═══════════════════════════════════════════
+function startEdit(t, idx) {
+  editState[t] = idx;
+  const rec = store[t][idx];
+  if (t==='ap') {
+    populateForm(AP_FIELDS, rec, {
+      'ap-codigo':'codigo','ap-carta-pres':'carta_pres','ap-fec-pres':'fec_pres',
+      'ap-causal':'causal_val','ap-descripcion':'descripcion',
+      'ap-fecha-inicio':'fecha_inicio','ap-fecha-fin':'fecha_fin','ap-dias-rc':'dias_rc',
+      'ap-cod-cronograma':'cod_cronograma','ap-impacto':'impacto',
+      'ap-asiento-inicio':'asiento_inicio','ap-asiento-cierre':'asiento_cierre',
+      'ap-documento':'documento','ap-inf-residente':'inf_residente',
+      'ap-dias':'dias','ap-fec-lim':'fec_lim','ap-fec-lim-entidad':'fec_lim_entidad',
+      'ap-estado':'estado','ap-dias-ap':'dias_ap','ap-nresol':'nresol','ap-fec-resp':'fec_resp',
+      'ap-addenda':'addenda','ap-nueva-fecha':'nueva_fecha','ap-obs':'obs'
+    });
+    updateAPSteps();
+  }
+  if (t==='ct') {
+    populateForm(CT_FIELDS, rec, {
+      'ct-codigo':'codigo','ct-tipo':'tipo',
+      'ct-materia':'materia','ct-fundamento':'fundamento',
+      'ct-monto':'monto','ct-montorec':'montorec',
+      'ct-plazo-disp':'plazo_disp','ct-plazo-rec':'plazo_rec',
+      'ct-fec-oc':'fec_oc',
+      'ct-doc-pres':'doc_pres','ct-fec-pres':'fec_pres',
+      'ct-doc-contest':'doc_contest','ct-fec-contestacion':'fec_contestacion',
+      'ct-doc-aud':'doc_aud','ct-fec-audiencia':'fec_audiencia',
+      'ct-doc-dec':'doc_dec','ct-fec-dec':'fec_dec',
+      'ct-fec-lim':'fec_lim','ct-fec-notif':'fec_notif',
+      'ct-fec-recepcion':'fec_recepcion','ct-resultado':'resultado',
+      'ct-accion':'accion','ct-obs':'obs'
+    });
+    escritos.length=0; (rec.escritos||[]).forEach(e=>escritos.push(e)); renderEscritos(escritos);
+    audiencias.length=0; (rec.audiencias||[]).forEach(a=>audiencias.push(a)); renderAudiencias(audiencias);
+  }
+  if (t==='ad') {
+    populateForm(AD_FIELDS, rec, {
+      'ad-codigo':'codigo','ad-tipo':'tipo','ad-ncontrato':'ncontrato','ad-desc':'desc',
+      'ad-causal':'causal','ad-montosol':'montosol','ad-pct':'pct','ad-montoaprob':'montoaprob',
+      'ad-plazo-dias':'plazo_dias','ad-asiento':'asiento','ad-inf-sup':'inf_sup',
+      'ad-inf-res':'inf_res','ad-exp-tec':'exp_tec','ad-presupuesto':'presupuesto',
+      'ad-fec-sol':'fec_sol','ad-fec-sup':'fec_sup','ad-fec-lim-ent':'fec_lim_ent',
+      'ad-fec-cgr':'fec_cgr','ad-fec-cgr-lim':'fec_cgr_lim',
+      'ad-fec-aprob':'fec_aprob','ad-nresol':'nresol','ad-estado':'estado','ad-obs':'obs'
+    });
+    obsRondas.length=0; (rec.obs_rondas||[]).forEach(o=>obsRondas.push(o)); renderObsRondas(obsRondas);
+  }
+  document.getElementById('edit-banner-'+t).style.display='flex';
+  document.getElementById('edit-codigo-'+t).textContent = rec.codigo;
+  document.getElementById('form-head-'+t).textContent = '✏️ Editando: '+rec.codigo;
+  document.getElementById('btn-add-'+t).style.display='none';
+  document.getElementById('btn-save-edit-'+t).style.display='flex';
+  document.getElementById('sec-'+t).scrollIntoView({behavior:'smooth'});
+  toast('Cargado para edición: '+rec.codigo,'warn');
+}
+
+function populateForm(fields, rec, map) {
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id); if(!el) return;
+    el.value = rec[key]||'';
+  });
+}
+
+function saveEdit(t) {
+  const idx = editState[t];
+  if (idx===null) return;
+  const oldRec = store[t][idx];
+  let newRec;
+  if (t==='ap') {
+    if (!validate(['ap-codigo','ap-causal','ap-descripcion','ap-dias','ap-fec-pres','ap-fecha-inicio','ap-estado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    newRec = collectAP();
+  } else if (t==='ct') {
+    if (!validate(['ct-codigo','ct-tipo','ct-materia','ct-monto','ct-fec-oc','ct-fec-pres','ct-resultado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    newRec = collectCT();
+  } else {
+    if (!validate(['ad-codigo','ad-tipo','ad-desc','ad-montosol','ad-fec-sol','ad-estado'])) { toast('Completa los campos obligatorios (*)','err'); return; }
+    newRec = collectAD();
+  }
+  // Preservar historial y agregar entrada
+  newRec.hist = [...(oldRec.hist||[])];
+  newRec.hist.push({ fecha: nowStr(), cambio: `Estado: ${oldRec.estado||'—'} → ${newRec.estado||'—'} | Obs: ${newRec.obs||'—'}` });
+  store[t][idx] = newRec;
+  saveStore(t); renderTable(t); renderStats(t);
+  if (t==='ad') recalcAdStats();
+  cancelEdit(t); toast('Registro actualizado ✓');
+}
+
+function cancelEdit(t) {
+  editState[t] = null;
+  document.getElementById('edit-banner-'+t).style.display='none';
+  const heads = {'ap':'📋 Nueva Ampliación de Plazo','ct':'⚖️ Nueva Controversia / JRD','ad':'➕ Nuevo Adicional de Obra'};
+  document.getElementById('form-head-'+t).textContent = heads[t];
+  document.getElementById('btn-add-'+t).style.display='flex';
+  document.getElementById('btn-save-edit-'+t).style.display='none';
+}
+
+function deleteRecord(t, idx) {
+  if (!confirm('¿Eliminar el registro '+store[t][idx].codigo+'? Esta acción no se puede deshacer.')) return;
+  store[t].splice(idx,1); saveStore(t); renderTable(t); renderStats(t);
+  if(t==='ad') recalcAdStats();
+  toast('Registro eliminado','err');
+}
+
+function clearAll(t) {
+  if (!store[t].length) return;
+  if (!confirm('¿Limpiar TODOS los registros de esta sección?')) return;
+  store[t]=[]; saveStore(t); renderTable(t); renderStats(t);
+  if(t==='ad') recalcAdStats();
+  toast('Tabla limpiada','err');
+}
+
+// ═══════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════
+function pillHtml(v) {
+  if (!v) return '';
+  const m = v.toLowerCase();
+  const cls = m.includes('aprob')||m==='favorable'||m.includes('silencio') ? 'p-aprobado'
+    : m==='desfavorable'||m.includes('deneg')||m.includes('rechaz') ? 'p-denegado'
+    : m==='parcialmente favorable' ? 'p-parcial'
+    : m.includes('trámite')||m.includes('evaluac') ? 'p-tramite'
+    : 'p-tramite';
+  return `<span class="pill ${cls}">${v}</span>`;
+}
+
+function renderTable(t) {
+  const recs = store[t];
+  document.getElementById('rtitle-'+t).textContent = `Registros (${recs.length})`;
+  document.getElementById('badge-'+t).textContent = recs.length;
+  const tbody = document.getElementById('tbody-'+t);
+  const cols = t==='ap'?12:t==='ct'?11:11;
+  if (!recs.length) { tbody.innerHTML=`<tr><td colspan="${cols}"><div class="empty-state">Sin registros aún</div></td></tr>`; return; }
+
+  if (t==='ap') {
+    const td = today();
+    tbody.innerHTML = recs.map((r,i)=>`<tr>
+      <td>${i+1}</td>
+      <td><strong>${r.codigo}</strong></td>
+      <td title="${r.causal}" style="max-width:160px;">${(r.causal||'').substring(0,30)}${(r.causal||'').length>30?'…':''}</td>
+      <td style="text-align:center;">${r.dias}</td>
+      <td>${fmtDate(r.fec_pres)}</td>
+      <td style="color:${r.fec_lim_entidad&&r.fec_lim_entidad<td&&r.estado==='EN TRÁMITE'?'#C00000':'inherit'}">${fmtDate(r.fec_lim_entidad)}</td>
+      <td style="text-align:center;">${r.dias_ap||'—'}</td>
+      <td>${r.nresol||'—'}</td>
+      <td>${pillHtml(r.estado)}</td>
+      <td style="max-width:220px;white-space:normal;font-size:11px;color:var(--dgrey);line-height:1.4;">${r.obs||'—'}</td>
+      <td style="font-size:9px;color:var(--muted);white-space:nowrap;">${r.mod||''}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-tbl btn-edit-tbl" onclick="startEdit('ap',${i})" title="Editar">✏️</button>
+        <button class="btn-tbl btn-del-tbl"  onclick="deleteRecord('ap',${i})" title="Eliminar">✕</button>
+      </td></tr>`).join('');
+  }
+  if (t==='ct') {
+    tbody.innerHTML = recs.map((r,i)=>`<tr>
+      <td>${i+1}</td>
+      <td><strong>${r.codigo}</strong></td>
+      <td>${(r.tipo||'').substring(0,20)}</td>
+      <td title="${r.materia}">${(r.materia||'').substring(0,28)}${(r.materia||'').length>28?'…':''}</td>
+      <td>${fmtM(r.monto)}</td>
+      <td>${fmtDate(r.fec_pres)}</td>
+      <td>${fmtDate(r.fec_lim)}</td>
+      <td>${r.montorec?fmtM(r.montorec):'—'}</td>
+      <td>${pillHtml(r.resultado)}</td>
+      <td style="font-size:9px;color:var(--muted)">${r.mod||''}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-tbl btn-edit-tbl" onclick="startEdit('ct',${i})" title="Editar">✏️</button>
+        <button class="btn-tbl btn-del-tbl"  onclick="deleteRecord('ct',${i})" title="Eliminar">✕</button>
+      </td></tr>`).join('');
+  }
+  if (t==='ad') {
+    tbody.innerHTML = recs.map((r,i)=>`<tr>
+      <td>${i+1}</td>
+      <td><strong>${r.codigo}</strong></td>
+      <td>${(r.tipo||'').substring(0,22)}</td>
+      <td title="${r.desc}">${(r.desc||'').substring(0,26)}${(r.desc||'').length>26?'…':''}</td>
+      <td>${fmtM(r.montosol)}</td>
+      <td style="text-align:center;${parseFloat(r.pct)>15?'color:#C00000;font-weight:600':parseFloat(r.pct)>10?'color:#7F6000;font-weight:600':''}">${r.pct?r.pct+'%':'—'}</td>
+      <td>${r.montoaprob?fmtM(r.montoaprob):'—'}</td>
+      <td>${fmtDate(r.fec_sol)}</td>
+      <td>${pillHtml(r.estado)}</td>
+      <td style="font-size:9px;color:var(--muted)">${r.mod||''}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-tbl btn-edit-tbl" onclick="startEdit('ad',${i})" title="Editar">✏️</button>
+        <button class="btn-tbl btn-del-tbl"  onclick="deleteRecord('ad',${i})" title="Eliminar">✕</button>
+      </td></tr>`).join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+function renderStats(t) {
+  const el = document.getElementById('stats-'+t);
+  if (t==='ap') {
+    const r=store.ap, td=today();
+    const venc = r.filter(x=>x.estado==='EN TRÁMITE'&&x.fec_lim&&x.fec_lim<td).length;
+    const diasAp = r.reduce((a,x)=>a+parseInt(x.dias_ap||0),0);
+    el.innerHTML=`
+      <div class="stat-chip sc-ap"><div class="sc-val">${r.length}</div><div class="sc-lbl">Total AP</div></div>
+      <div class="stat-chip sc-ap"><div class="sc-val">${r.filter(x=>x.estado.includes('APROBADO')||x.estado==='SILENCIO POSITIVO').length}</div><div class="sc-lbl">Aprobadas</div></div>
+      <div class="stat-chip sc-ap"><div class="sc-val">${r.filter(x=>x.estado==='EN TRÁMITE').length}</div><div class="sc-lbl">En trámite</div></div>
+      <div class="stat-chip sc-ap"><div class="sc-val">${r.filter(x=>x.estado==='DENEGADO').length}</div><div class="sc-lbl">Denegadas</div></div>
+      <div class="stat-chip sc-ap"><div class="sc-val">${diasAp}</div><div class="sc-lbl">Días aprobados</div></div>
+      ${venc?`<div class="stat-chip sc-warn"><div class="sc-val" style="color:#C00000">${venc}</div><div class="sc-lbl">Plazos vencidos</div></div>`:''}`;
+  }
+  if (t==='ct') {
+    const r=store.ct;
+    const mD=r.reduce((a,x)=>a+parseFloat(x.monto||0),0);
+    const mR=r.reduce((a,x)=>a+parseFloat(x.montorec||0),0);
+    el.innerHTML=`
+      <div class="stat-chip sc-ct"><div class="sc-val">${r.length}</div><div class="sc-lbl">Total Contr.</div></div>
+      <div class="stat-chip sc-ct"><div class="sc-val">${r.filter(x=>x.resultado==='FAVORABLE'||x.resultado==='PARCIALMENTE FAVORABLE').length}</div><div class="sc-lbl">Favorables</div></div>
+      <div class="stat-chip sc-ct"><div class="sc-val">${r.filter(x=>x.resultado==='EN TRÁMITE').length}</div><div class="sc-lbl">En trámite</div></div>
+      <div class="stat-chip sc-ct"><div class="sc-val">${r.filter(x=>x.resultado==='DESFAVORABLE').length}</div><div class="sc-lbl">Desfavorables</div></div>
+      <div class="stat-chip sc-ct"><div class="sc-val" style="font-size:12px">${fmtM(mD)}</div><div class="sc-lbl">Monto disputa</div></div>
+      <div class="stat-chip sc-ct"><div class="sc-val" style="font-size:12px">${fmtM(mR)}</div><div class="sc-lbl">Reconocido</div></div>`;
+  }
+  if (t==='ad') recalcAdStats();
+}
+
+function recalcAdStats() {
+  const r=store.ad, base=parseFloat(localStorage.getItem('rlce_montobase')||'0');
+  const mS=r.reduce((a,x)=>a+parseFloat(x.montosol||0),0);
+  const mA=r.filter(x=>x.montoaprob).reduce((a,x)=>a+parseFloat(x.montoaprob||0),0);
+  const pct=base>0?(mA/base*100):0;
+  const el=document.getElementById('stats-ad');
+  el.innerHTML=`
+    <div class="stat-chip sc-ad"><div class="sc-val">${r.length}</div><div class="sc-lbl">Total Adic.</div></div>
+    <div class="stat-chip sc-ad"><div class="sc-val">${r.filter(x=>x.estado.includes('APROBADO')).length}</div><div class="sc-lbl">Aprobados</div></div>
+    <div class="stat-chip sc-ad"><div class="sc-val">${r.filter(x=>x.estado.includes('EVALUAC')).length}</div><div class="sc-lbl">En evaluación</div></div>
+    <div class="stat-chip sc-ad"><div class="sc-val" style="font-size:12px">${fmtM(mS)}</div><div class="sc-lbl">Solicitado</div></div>
+    <div class="stat-chip sc-ad"><div class="sc-val" style="font-size:12px">${fmtM(mA)}</div><div class="sc-lbl">Aprobado</div></div>
+    ${base>0?`<div class="stat-chip ${pct>15?'sc-warn':'sc-ad'}"><div class="sc-val" style="${pct>15?'color:#C00000':''}">${pct.toFixed(1)}%</div><div class="sc-lbl">% acum.</div></div>`:''}`;
+  const al=document.getElementById('ad-alerta');
+  if (base>0) {
+    al.style.display='block';
+    if(pct>15){al.style.cssText='display:block;background:#FFCCCC;color:#C00000;border:1px solid #C00000;padding:8px 12px;border-radius:7px;font-size:11px;font-weight:600;';al.textContent='⚠ Supera 15% – Requiere aprobación CGR';}
+    else if(pct>10){al.style.cssText='display:block;background:#FFF2CC;color:#7F6000;border:1px solid #FFD966;padding:8px 12px;border-radius:7px;font-size:11px;font-weight:600;';al.textContent=`⚡ ${pct.toFixed(1)}% acumulado – Próximo al límite`;}
+    else{al.style.cssText='display:block;background:var(--lgreen);color:var(--green);border:1px solid #70AD47;padding:8px 12px;border-radius:7px;font-size:11px;font-weight:600;';al.textContent=`✔ ${pct.toFixed(1)}% acumulado – Dentro del límite`;}
+  } else al.style.display='none';
+}
+
+// ═══════════════════════════════════════════
+// RESET FORM
+// ═══════════════════════════════════════════
+function resetForm(t) {
+  const ids = t==='ap'?AP_FIELDS:t==='ct'?CT_FIELDS:AD_FIELDS;
+  ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.classList.remove('err'); if(el.tagName==='SELECT') el.selectedIndex=0; else el.value=''; });
+  if(t==='ct'){ document.getElementById('ct-plazo').value='30'; escritos.length=0; renderEscritos(escritos); audiencias.length=0; renderAudiencias(audiencias); }
+  if(t==='ap'){ document.getElementById('ap-lim-note').textContent=''; document.querySelectorAll('[id^="step-ap-"]').forEach(s=>s.classList.remove('done','active-step','alert')); }
+  if(t==='ad'){ obsRondas.length=0; renderObsRondas(obsRondas); ['obs-descripcion','obs-carta-notif','obs-fec-notif','obs-carta-levant','obs-fec-levant'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); const sp=document.getElementById('obs-por'); if(sp) sp.selectedIndex=0; }
+}
+
+// ═══════════════════════════════════════════
+// DRAFT
+// ═══════════════════════════════════════════
+function saveDraft(t) {
+  const ids=t==='ap'?AP_FIELDS:t==='ct'?CT_FIELDS:AD_FIELDS;
+  const d={};
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) d[id]=el.value; });
+  if(t==='ct'){ d._escritos=JSON.stringify(escritos); d._audiencias=JSON.stringify(audiencias); }
+  if(t==='ad'){ d._obsrondas=JSON.stringify(obsRondas); }
+  localStorage.setItem('rlce_draft_'+t, JSON.stringify(d));
+  toast('Borrador guardado ✓');
+}
+function loadDraft(t) {
+  const raw=localStorage.getItem('rlce_draft_'+t); if(!raw) return;
+  const d=JSON.parse(raw); let has=false;
+  Object.entries(d).forEach(([id,v])=>{ if(id.startsWith('_')) return; const el=document.getElementById(id); if(el&&v){el.value=v;has=true;} });
+  if(t==='ct'){ if(d._escritos){const arr=JSON.parse(d._escritos);arr.forEach(e=>escritos.push(e));renderEscritos(escritos);} if(d._audiencias){const arr=JSON.parse(d._audiencias);arr.forEach(a=>audiencias.push(a));renderAudiencias(audiencias);} }
+  if(t==='ad'){ if(d._obsrondas){const arr=JSON.parse(d._obsrondas);arr.forEach(o=>obsRondas.push(o));renderObsRondas(obsRondas);} }
+  if(has) document.getElementById('draft-bar-'+t).style.display='flex';
+}
+function clearDraft(t){ localStorage.removeItem('rlce_draft_'+t); resetForm(t); document.getElementById('draft-bar-'+t).style.display='none'; toast('Borrador descartado'); }
+function clearDraftStore(t){ localStorage.removeItem('rlce_draft_'+t); document.getElementById('draft-bar-'+t).style.display='none'; }
+setInterval(()=>{ ['ap','ct','ad'].forEach(t=>{ const ids=t==='ap'?AP_FIELDS:t==='ct'?CT_FIELDS:AD_FIELDS; if(ids.some(id=>{ const el=document.getElementById(id); return el&&el.value.trim(); })) { const d={}; ids.forEach(id=>{ const el=document.getElementById(id); if(el) d[id]=el.value; }); localStorage.setItem('rlce_draft_'+t,JSON.stringify(d)); } }); },60000);
+
+// ═══════════════════════════════════════════
+// EXPORT EXCEL – FORMATO ENRIQUECIDO
+// ═══════════════════════════════════════════
+function exportExcel(t) {
+  const recs = store[t];
+  if (!recs.length) { toast('No hay registros para exportar','err'); return; }
+  const wb = XLSX.utils.book_new();
+  const td = new Date().toLocaleDateString('es-PE');
+
+  // ── Helpers de estilo ──────────────────────────────────────
+  const fill = rgb => ({ patternType:'solid', fgColor:{ rgb } });
+  const font = (sz,bold,rgb,italic) => ({ name:'Arial', sz, bold:!!bold, color:{ rgb: rgb||'000000' }, italic:!!italic });
+  const border = (style='thin', rgb='BFBFBF') => { const s={style,color:{rgb}}; return {top:s,bottom:s,left:s,right:s}; };
+  const borderB = (topRgb='1F3864') => ({
+    top:{style:'medium',color:{rgb:topRgb}}, bottom:{style:'thin',color:{rgb:'BFBFBF'}},
+    left:{style:'thin',color:{rgb:'BFBFBF'}}, right:{style:'thin',color:{rgb:'BFBFBF'}}
+  });
+  const align = (h='center',v='center',wrap=false) => ({ horizontal:h, vertical:v, wrapText:wrap });
+
+  const cell = (v, sz, bold, fontRgb, fillRgb, hAlign, wrap, italic, numFmt, borderStyle) => {
+    const c = {
+      v: v===null||v===undefined ? '' : v,
+      t: typeof v==='number' ? 'n' : 's',
+      s: {
+        font: font(sz||9, bold, fontRgb||'000000', italic),
+        fill: fill(fillRgb||'FFFFFF'),
+        alignment: align(hAlign||'center','center',!!wrap),
+        border: borderStyle || border()
+      }
+    };
+    // xlsx-js-style: numFmt goes inside s.numFmt AND as c.z for compatibility
+    if (numFmt) { c.s.numFmt = numFmt; c.z = numFmt; }
+    return c;
+  };
+
+  // ── Colores temáticos ──────────────────────────────────────
+  const THEME = {
+    ap:  { h1:'1F3864', h2:'2E75B6', h3:'4472C4', hdr:'2E75B6', hdrFont:'FFFFFF', alt:'EBF3FB', sec:'D6E4F0', secFont:'1F3864' },
+    ct:  { h1:'7A3205', h2:'C55A11', h3:'ED7D31', hdr:'C55A11', hdrFont:'FFFFFF', alt:'FEF0E7', sec:'FCE4D6', secFont:'7A3205' },
+    ad:  { h1:'1E3A14', h2:'375623', h3:'548235', hdr:'375623', hdrFont:'FFFFFF', alt:'EBF5E4', sec:'E2EFDA', secFont:'1E3A14' }
+  };
+  const C = THEME[t];
+
+  // ── Colores de estado ──────────────────────────────────────
+  const estadoColor = v => {
+    if (!v) return { fill:'FFFFFF', font:'000000' };
+    const m = v.toLowerCase();
+    if (m.includes('aprobado')||m.includes('favorable')||m.includes('silencio'))
+      return { fill:'E2EFDA', font:'1E5C14' };
+    if (m.includes('deneg')||m.includes('rechaz')||m.includes('desfavor'))
+      return { fill:'FFCCCC', font:'9C0006' };
+    if (m.includes('trámite')||m.includes('evaluac'))
+      return { fill:'FFF2CC', font:'7F5000' };
+    if (m.includes('parcial'))
+      return { fill:'DEEAF1', font:'1F4E79' };
+    return { fill:'F2F2F2', font:'595959' };
+  };
+
+  // ── Función: agregar fila sección ──────────────────────────
+  const secRow = (ws, row, ncols, label, colorFill, colorFont) => {
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = {
+      v: '  ' + label, t:'s',
+      s: { font:font(8,true,colorFont||'FFFFFF'), fill:fill(colorFill), alignment:align('left','center',false), border:border('thin','FFFFFF') }
+    };
+    for (let c=1; c<ncols; c++) {
+      ws[XLSX.utils.encode_cell({r:row,c})] = { v:'', t:'s', s:{ fill:fill(colorFill), border:border('thin','FFFFFF') } };
+    }
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // EXPORTAR AP
+  // ════════════════════════════════════════════════════════════
+  if (t === 'ap') {
+    const NCOLS = 14;
+    const ws = {};
+    const merges = [];
+    let row = 0;
+
+    // ── Cabecera principal ─────────────────────────────────
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = {
+      v: 'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  AMPLIACIONES DE PLAZO DE EJECUCIÓN DE OBRA', t:'s',
+      s:{ font:font(12,true,'FFFFFF'), fill:fill(C.h1), alignment:align('center','center'), border:border('medium',C.h1) }
+    };
+    row++;
+
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = {
+      v: 'Arts. 197, 198, 199 RLCE  |  15 d.c. para presentar solicitud  |  Entidad resuelve en 15 d.h.  |  Silencio = Aprobado a 20 d.h.  |  Exportado: '+td, t:'s',
+      s:{ font:font(8,false,'D6E4F0',true), fill:fill(C.h2), alignment:align('center','center'), border:border('thin',C.h2) }
+    };
+    row++;
+
+    // ── Fila vacía separadora ──────────────────────────────
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'', t:'s', s:{ fill:fill('F2F2F2'), border:border('thin','E0E0E0') } };
+    row++;
+
+    // ── Encabezados de columna ─────────────────────────────
+    const hdrs = [
+      ['N°',4], ['Código AP',10], ['Causal Art.197',32],
+      ['Asiento\nInicio',12], ['Asiento\nCierre',12],
+      ['F. Inicio\nHecho',12], ['F. Fin\nHecho',12],
+      ['Días\nSolicitados',9], ['Carta\nPresentación',14],
+      ['F. Presentación\nSAP',13], ['F. Límite\nSupervisor',13],
+      ['F. Límite\nEntidad 20d.h.',14], ['Días\nAprobados',9], ['Estado',18]
+    ];
+    hdrs.forEach(([h,w],i) => {
+      ws[XLSX.utils.encode_cell({r:row,c:i})] = {
+        v:h, t:'s',
+        s:{ font:font(9,true,'FFFFFF'), fill:fill(C.hdr), alignment:align('center','center',true), border:borderB(C.h1) }
+      };
+    });
+    row++;
+
+    // ── Filas de datos ─────────────────────────────────────
+    recs.forEach((r, i) => {
+      const bg = i%2===0 ? 'FFFFFF' : C.alt;
+      const est = estadoColor(r.estado);
+      const rowData = [
+        [i+1,          4,  false, '595959', bg,     'center', false, null],
+        [r.codigo,     9,  true,  C.h2,     bg,     'center', false, null],
+        [r.causal,     9,  false, '1A1A2E', bg,     'left',   true,  null],
+        [r.asiento_inicio, 9, false,'595959',bg,    'center', false, null],
+        [r.asiento_cierre, 9, false,'595959',bg,    'center', false, null],
+        [fmtDate(r.fecha_inicio),9,false,'595959',bg,'center',false, null],
+        [fmtDate(r.fecha_fin),   9,false,'595959',bg,'center',false, null],
+        [parseInt(r.dias)||0, 9, true, C.h2, bg,   'center', false, '#,##0'],
+        [r.carta_pres, 9,  false, '595959', bg,     'center', false, null],
+        [fmtDate(r.fec_pres),9,false,'595959',bg,  'center', false, null],
+        [fmtDate(r.fec_lim), 9,false,'595959',bg,  'center', false, null],
+        [fmtDate(r.fec_lim_entidad),9,false,'595959',bg,'center',false,null],
+        [parseInt(r.dias_ap)||0, 9, true, '375623', bg, 'center',false,'#,##0'],
+        [r.estado,     9,  true,  est.font, est.fill,'center',false, null],
+      ];
+      rowData.forEach(([v,sz,bold,fRgb,fFill,hAlign,wrap,numFmt],j) => {
+        const c = cell(v,sz,bold,fRgb,fFill,hAlign,wrap,false,numFmt);
+        ws[XLSX.utils.encode_cell({r:row,c:j})] = c;
+      });
+      row++;
+    });
+
+    // ── Fila de totales ────────────────────────────────────
+    merges.push({s:{r:row,c:0},e:{r:row,c:6}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'TOTALES', t:'s', s:{ font:font(9,true,'FFFFFF'), fill:fill(C.h3), alignment:align('center'), border:border('medium',C.h2) }};
+    const totalDias = recs.reduce((a,r)=>a+parseInt(r.dias||0),0);
+    const totalAprobados = recs.reduce((a,r)=>a+parseInt(r.dias_ap||0),0);
+    [[7,totalDias,'#,##0'],[12,totalAprobados,'#,##0']].forEach(([col,val,fmt]) => {
+      ws[XLSX.utils.encode_cell({r:row,c:col})] = { v:val,t:'n',z:fmt, s:{ numFmt:fmt, font:font(9,true,'FFFFFF'), fill:fill(C.h3), alignment:align('center'), border:border('medium',C.h2) }};
+    });
+    for (let c=1;c<NCOLS;c++) {
+      if(![7,12].includes(c)) ws[XLSX.utils.encode_cell({r:row,c})] = { v:'',t:'s',s:{ fill:fill(C.h3), border:border('medium',C.h2) }};
+    }
+    row++;
+
+    // ── Fila de resumen por estado ─────────────────────────
+    row++;
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    secRow(ws, row, NCOLS, 'RESUMEN POR ESTADO', C.h2, 'FFFFFF');
+    row++;
+    const estados = ['EN TRÁMITE','APROBADO','APROBADO PARCIAL','DENEGADO','SILENCIO POSITIVO (Art. 198.4)','RETIRADO'];
+    estados.forEach(est => {
+      const count = recs.filter(r=>r.estado===est).length;
+      if (!count) return;
+      const ec = estadoColor(est);
+      merges.push({s:{r:row,c:0},e:{r:row,c:10}});
+      ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:est,t:'s',s:{ font:font(9,true,ec.font), fill:fill(ec.fill), alignment:align('left','center'), border:border() }};
+      ws[XLSX.utils.encode_cell({r:row,c:11})] = { v:count,t:'n',s:{ font:font(9,true,ec.font), fill:fill(ec.fill), alignment:align('center'), border:border() }};
+      merges.push({s:{r:row,c:11},e:{r:row,c:NCOLS-1}});
+      row++;
+    });
+
+    // ── Agregar columna Observaciones a la hoja resumen ───────
+    // (ya incluida en rowData como col 13 implícito — la agregamos aquí)
+    // Actualizar headers para incluir Observaciones
+    const hdrsConObs = [...hdrs, ['Observaciones / Seguimiento', 35]];
+    const NCOLS_OBS = NCOLS + 1;
+    // Re-dibujar header row con observaciones
+    hdrsConObs.forEach(([h,w],i) => {
+      ws[XLSX.utils.encode_cell({r:3,c:i})] = {
+        v:h, t:'s',
+        s:{ font:font(9,true,'FFFFFF'), fill:fill(C.hdr), alignment:align('center','center',true), border:borderB(C.h1) }
+      };
+    });
+    // Re-dibujar merges de cabecera para NCOLS_OBS
+    merges[0] = {s:{r:0,c:0},e:{r:0,c:NCOLS_OBS-1}};
+    merges[1] = {s:{r:1,c:0},e:{r:1,c:NCOLS_OBS-1}};
+    merges[2] = {s:{r:2,c:0},e:{r:2,c:NCOLS_OBS-1}};
+    // Re-dibujar fila de separador para NCOLS_OBS
+    for(let c=0;c<NCOLS_OBS;c++) {
+      if(!ws[XLSX.utils.encode_cell({r:2,c})]) ws[XLSX.utils.encode_cell({r:2,c})] = {v:'',t:'s',s:{fill:fill('F2F2F2'),border:border('thin','E0E0E0')}};
+    }
+    // Agregar celda de observaciones a cada fila de datos
+    const dataStartRow = 4;
+    recs.forEach((r, i) => {
+      const dataRow = dataStartRow + i;
+      const bg = i%2===0 ? 'FFFFFF' : C.alt;
+      ws[XLSX.utils.encode_cell({r:dataRow,c:NCOLS})] = cell(r.obs||'', 9, false, '4A4A4A', bg, 'left', true);
+    });
+    // Actualizar fila de totales y resumen para NCOLS_OBS
+    // (ya están pintadas, solo ampliar el merge de totales)
+    const totRow = dataStartRow + recs.length;
+    ws[XLSX.utils.encode_cell({r:totRow,c:NCOLS})] = {v:'',t:'s',s:{fill:fill(C.h3),border:border('medium',C.h2)}};
+
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:row+5,c:NCOLS_OBS-1}});
+    ws['!merges'] = merges;
+    ws['!cols'] = hdrsConObs.map(([,w])=>({wch:w}));
+    ws['!rows'] = [
+      {hpt:26},{hpt:14},{hpt:6},{hpt:32},
+      ...recs.map(()=>({hpt:22})),
+      {hpt:18},{hpt:6},{hpt:16},
+      ...Array(6).fill({hpt:16})
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Ampliaciones de Plazo');
+
+    // ════════════════════════════════════════════════════════
+    // HOJA 2 – DETALLE COMPLETO EN FORMATO COLUMNAR
+    // Estructura: fila 0-1 cabecera · fila 2 macro-secciones
+    //             fila 3 sub-headers · fila 4+ datos (1 fila por registro)
+    // ════════════════════════════════════════════════════════
+    const ws2 = {};
+    const merges2 = [];
+
+    // ── Definición de columnas agrupadas por sección ───────
+    // [ campo_en_rec, label_columna, ancho ]
+    const SECCIONES = [
+      {
+        titulo: 'I. IDENTIFICACIÓN',
+        color: C.h2,
+        cols: [
+          ['codigo',       'Código AP',              12],
+          ['carta_pres',   'Código Carta SAP',        18],
+          ['fec_pres',     'Fecha Presentación SAP',  16],
+        ]
+      },
+      {
+        titulo: 'II. CAUSAL (Art. 197)',
+        color: C.h3,
+        cols: [
+          ['causal',       'Causal Art. 197',         36],
+          ['descripcion',  'Descripción Detallada',   40],
+        ]
+      },
+      {
+        titulo: 'III. CRONOGRAMA AFECTADO',
+        color: C.h2,
+        cols: [
+          ['fecha_inicio',    'F. Inicio Hecho',          14],
+          ['fecha_fin',       'F. Fin Hecho',             14],
+          ['dias_rc',         'Días Retraso RC',          10],
+          ['cod_cronograma',  'Comunic. Cronograma Vigente', 24],
+          ['impacto',         'Impacto en Ruta Crítica',  30],
+        ]
+      },
+      {
+        titulo: 'IV. SUSTENTO DOCUMENTAL (Art. 198.1)',
+        color: C.h3,
+        cols: [
+          ['asiento_inicio',  'Asiento Cuaderno – INICIO Causal', 22],
+          ['asiento_cierre',  'Asiento Cuaderno – CIERRE Causal', 22],
+          ['documento',       'Doc. Sustento Adicional',          18],
+          ['inf_residente',   'Informe Residente',                16],
+        ]
+      },
+      {
+        titulo: 'V. SOLICITUD FORMAL (Art. 198.1 – 15 d.c.)',
+        color: C.h2,
+        cols: [
+          ['dias',            'Días Solicitados',              10],
+          ['fec_lim',         'F. Límite Supervisor (+5 d.h.)',15],
+          ['fec_lim_entidad', 'F. Límite Entidad (+20 d.h.)', 15],
+        ]
+      },
+      {
+        titulo: 'VI. PRONUNCIAMIENTO ENTIDAD (Art. 198)',
+        color: C.h3,
+        cols: [
+          ['estado',    'Estado',                    20],
+          ['dias_ap',   'Días Aprobados',            10],
+          ['nresol',    'N° Resolución / Doc.',      18],
+          ['fec_resp',  'Fecha Respuesta Entidad',   16],
+        ]
+      },
+      {
+        titulo: 'VII. MODIFICACIÓN CONTRACTUAL',
+        color: C.h2,
+        cols: [
+          ['addenda',     'N° Addenda',               14],
+          ['nueva_fecha', 'Nueva F. Término Contrac.', 18],
+        ]
+      },
+      {
+        titulo: 'VIII. OBSERVACIONES Y SEGUIMIENTO',
+        color: C.h3,
+        cols: [
+          ['obs', 'Observaciones / Acciones Pendientes', 45],
+        ]
+      },
+    ];
+
+    // Aplanar todas las columnas en orden
+    const allCols = SECCIONES.flatMap(s => s.cols);
+    const TOTAL_COLS = allCols.length;
+
+    // ── Fila 0: Título principal ───────────────────────────
+    merges2.push({s:{r:0,c:0},e:{r:0,c:TOTAL_COLS-1}});
+    ws2[XLSX.utils.encode_cell({r:0,c:0})] = {
+      v:'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  DETALLE COMPLETO DE AMPLIACIONES DE PLAZO', t:'s',
+      s:{font:font(12,true,'FFFFFF'),fill:fill(C.h1),alignment:align('center'),border:border('medium',C.h1)}
+    };
+
+    // ── Fila 1: Subtítulo normativo ────────────────────────
+    merges2.push({s:{r:1,c:0},e:{r:1,c:TOTAL_COLS-1}});
+    ws2[XLSX.utils.encode_cell({r:1,c:0})] = {
+      v:'Arts. 197, 198, 199 RLCE  |  15 d.c. para solicitar  |  Entidad resuelve en 15 d.h.  |  Silencio = Aprobado a 20 d.h. (Art. 198.4)  |  Exportado: '+td, t:'s',
+      s:{font:font(8,false,'D6E4F0',true),fill:fill(C.h2),alignment:align('center'),border:border('thin',C.h2)}
+    };
+
+    // ── Fila 2: Macro-secciones (celdas fusionadas por sección) ──
+    let colIdx = 0;
+    SECCIONES.forEach(sec => {
+      const span = sec.cols.length;
+      if (span > 1) merges2.push({s:{r:2,c:colIdx},e:{r:2,c:colIdx+span-1}});
+      ws2[XLSX.utils.encode_cell({r:2,c:colIdx})] = {
+        v: sec.titulo, t:'s',
+        s:{font:font(9,true,'FFFFFF'),fill:fill(sec.color),alignment:align('center','center',true),border:borderB(C.h1)}
+      };
+      // Rellenar celdas fusionadas vacías
+      for(let k=1;k<span;k++) {
+        ws2[XLSX.utils.encode_cell({r:2,c:colIdx+k})] = {v:'',t:'s',s:{fill:fill(sec.color),border:border('thin',sec.color)}};
+      }
+      colIdx += span;
+    });
+
+    // ── Fila 3: Sub-headers (nombre de cada campo) ─────────
+    colIdx = 0;
+    let secIdx2 = 0;
+    SECCIONES.forEach(sec => {
+      sec.cols.forEach(([,label], ci) => {
+        ws2[XLSX.utils.encode_cell({r:3,c:colIdx})] = {
+          v: label, t:'s',
+          s:{font:font(9,true,'FFFFFF'),fill:fill(C.hdr),alignment:align('center','center',true),border:borderB(C.h1)}
+        };
+        colIdx++;
+      });
+      secIdx2++;
+    });
+
+    // ── Filas 4+: Una fila por registro ────────────────────
+    recs.forEach((rec, i) => {
+      const rowNum = 4 + i;
+      const bg = i%2===0 ? 'FFFFFF' : C.alt;
+      let c = 0;
+      SECCIONES.forEach(sec => {
+        sec.cols.forEach(([campo]) => {
+          let v = rec[campo] || '';
+          // Formatear fechas
+          if (['fec_pres','fecha_inicio','fecha_fin','fec_lim','fec_lim_entidad','fec_resp','nueva_fecha'].includes(campo)) v = fmtDate(v)||'—';
+          // Formato numérico
+          const isNum = ['dias','dias_ap','dias_rc'].includes(campo);
+          const isEstado = campo === 'estado';
+          const estC = isEstado ? estadoColor(v) : null;
+          ws2[XLSX.utils.encode_cell({r:rowNum,c})] = {
+            v: isNum ? (parseInt(v)||0) : (v||'—'),
+            t: isNum ? 'n' : 's',
+            s:{
+              font: font(9, isEstado||campo==='codigo'||isNum, isEstado?estC.font: campo==='codigo'?C.h2: isNum?C.h2: '1A1A2E'),
+              fill: fill(isEstado ? estC.fill : campo==='obs' ? 'FFFDE7' : bg),
+              alignment: align(
+                ['dias','dias_ap','dias_rc'].includes(campo) ? 'center' :
+                ['fec_pres','fecha_inicio','fecha_fin','fec_lim','fec_lim_entidad','fec_resp','nueva_fecha','carta_pres','nresol','addenda'].includes(campo) ? 'center' :
+                'left',
+                'center',
+                ['descripcion','impacto','obs'].includes(campo)
+              ),
+              border: border()
+            }
+          };
+          c++;
+        });
+      });
+    });
+
+    ws2['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:4+recs.length,c:TOTAL_COLS-1}});
+    ws2['!merges'] = merges2;
+    ws2['!cols'] = allCols.map(([,, w])=>({wch:w}));
+    ws2['!rows'] = [{hpt:26},{hpt:14},{hpt:28},{hpt:32},...recs.map(()=>({hpt:22}))];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Completo AP');
+
+    XLSX.writeFile(wb, `AP_RLCE_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel AP exportado ✓ (2 hojas)');
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // EXPORTAR CONTROVERSIAS
+  // ════════════════════════════════════════════════════════════
+  if (t === 'ct') {
+    const NCOLS = 13;
+    const ws = {};
+    const merges = [];
+    let row = 0;
+
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  CONTROVERSIAS – JRD Y ARBITRAJE', t:'s',
+      s:{ font:font(12,true,'FFFFFF'), fill:fill(C.h1), alignment:align('center'), border:border('medium',C.h1) }};
+    row++;
+    // ── Hoja 1: Tabla resumen actualizada ────────────────
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'Directiva N° 012-2019-OSCE/CD  |  Arts. 243-251 RLCE  |  JRD obligatoria &gt; S/ 20,000,000  |  Todos los plazos en d.h. (Dir. 6.2)  |  Exportado: '+td, t:'s',
+      s:{ font:font(8,false,'FCE4D6',true), fill:fill(C.h2), alignment:align('center'), border:border('thin',C.h2) }};
+    row++;
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS-1}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'',t:'s',s:{ fill:fill('F2F2F2'), border:border('thin','E0E0E0') }};
+    row++;
+
+    const hdrs = [
+      ['N°',4],['Código',10],['Tipo Mecanismo',24],
+      ['Materia / Controversia',35],
+      ['Monto\nDisputa (S/)',16],['Monto\nReconocido (S/)',16],
+      ['Plazo\nDisputa (d)',10],['Plazo\nReconocido (d)',10],
+      ['Doc. Petición',16],['F. Presentación\nCentro',14],
+      ['Doc. Decisión\nJRD',16],['F. Decisión\nJRD',13],
+      ['F. Límite\nDecisión',13],['Resultado',24]
+    ];
+    const NCOLS2 = hdrs.length;
+    hdrs.forEach(([h],i) => {
+      ws[XLSX.utils.encode_cell({r:row,c:i})] = { v:h,t:'s', s:{ font:font(9,true,'FFFFFF'), fill:fill(C.hdr), alignment:align('center','center',true), border:borderB(C.h1) }};
+    });
+    row++;
+
+    recs.forEach((r,i) => {
+      const bg = i%2===0?'FFFFFF':C.alt;
+      const est = estadoColor(r.resultado);
+      const rowData = [
+        [i+1,9,false,'595959',bg,'center',false,null],
+        [r.codigo,9,true,C.h2,bg,'center',false,null],
+        [r.tipo,9,false,'1A1A2E',bg,'left',false,null],
+        [r.materia,9,false,'1A1A2E',bg,'left',true,null],
+        [parseFloat(r.monto)||0,9,true,C.h2,bg,'center',false,'"S/ "#,##0.00'],
+        [parseFloat(r.montorec)||0,9,true,'375623',bg,'center',false,'"S/ "#,##0.00'],
+        [parseInt(r.plazo_disp)||0,9,false,'595959',bg,'center',false,'#,##0'],
+        [parseInt(r.plazo_rec)||0,9,false,'375623',bg,'center',false,'#,##0'],
+        [r.doc_pres||'',9,false,'595959',bg,'center',false,null],
+        [fmtDate(r.fec_pres),9,false,'595959',bg,'center',false,null],
+        [r.doc_dec||'',9,false,'595959',bg,'center',false,null],
+        [fmtDate(r.fec_dec),9,false,'595959',bg,'center',false,null],
+        [fmtDate(r.fec_lim),9,false,'595959',bg,'center',false,null],
+        [r.resultado,9,true,est.font,est.fill,'center',false,null],
+      ];
+      rowData.forEach(([v,sz,bold,fRgb,fFill,hAlign,wrap,numFmt],j) => {
+        ws[XLSX.utils.encode_cell({r:row,c:j})] = cell(v,sz,bold,fRgb,fFill,hAlign,wrap,false,numFmt);
+      });
+      row++;
+    });
+
+    // Totales
+    merges.push({s:{r:row,c:0},e:{r:row,c:3}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = { v:'TOTALES',t:'s',s:{ font:font(9,true,'FFFFFF'), fill:fill(C.h3), alignment:align('center'), border:border('medium',C.h2) }};
+    const totDisp = recs.reduce((a,r)=>a+parseFloat(r.monto||0),0);
+    const totRec  = recs.reduce((a,r)=>a+parseFloat(r.montorec||0),0);
+    [[4,totDisp],[5,totRec]].forEach(([col,val]) => {
+      ws[XLSX.utils.encode_cell({r:row,c:col})] = { v:val,t:'n',z:'"S/ "#,##0.00',s:{ numFmt:'"S/ "#,##0.00', font:font(9,true,'FFFFFF'), fill:fill(C.h3), alignment:align('center'), border:border('medium',C.h2) }};
+    });
+    for(let c=1;c<NCOLS2;c++) { if(![4,5].includes(c)) ws[XLSX.utils.encode_cell({r:row,c})] = {v:'',t:'s',s:{fill:fill(C.h3),border:border('medium',C.h2)}}; }
+    row++;
+
+    // Resumen por resultado
+    row++;
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS2-1}});
+    secRow(ws, row, NCOLS2, 'RESUMEN POR RESULTADO', C.h2, 'FFFFFF');
+    row++;
+    ['EN TRÁMITE','FAVORABLE','PARCIALMENTE FAVORABLE','DESFAVORABLE','DECISIÓN INEFICAZ – fuera de plazo (Dir. 7.16)','SOMETIDO A ARBITRAJE (Art. 251.3)','DESISTIDO','TRANSADO'].forEach(est => {
+      const count = recs.filter(r=>r.resultado===est).length;
+      if (!count) return;
+      const ec = estadoColor(est);
+      merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS2-2}});
+      ws[XLSX.utils.encode_cell({r:row,c:0})] = {v:est,t:'s',s:{font:font(9,true,ec.font),fill:fill(ec.fill),alignment:align('left','center'),border:border()}};
+      ws[XLSX.utils.encode_cell({r:row,c:NCOLS2-1})] = {v:count,t:'n',s:{font:font(9,true,ec.font),fill:fill(ec.fill),alignment:align('center'),border:border()}};
+      row++;
+    });
+
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:row,c:NCOLS2-1}});
+    ws['!merges'] = merges;
+    ws['!cols'] = hdrs.map(([,w])=>({wch:w}));
+    ws['!rows'] = [{hpt:26},{hpt:14},{hpt:6},{hpt:32},...recs.map(()=>({hpt:18})),{hpt:18},{hpt:6},{hpt:16},...Array(8).fill({hpt:16})];
+    XLSX.utils.book_append_sheet(wb, ws, 'Controversias JRD');
+
+    // ════════════════════════════════════════════════════════
+    // HOJA 2 – DETALLE COMPLETO POR SECCIONES EN COLUMNAS
+    // ════════════════════════════════════════════════════════
+    const ws2c = {};
+    const merges2c = [];
+
+    const SECC_CT = [
+      {
+        titulo: 'I. IDENTIFICACIÓN',
+        color: C.h2,
+        cols: [
+          ['codigo',    'Código',          12],
+          ['tipo',      'Tipo Mecanismo',  28],
+        ]
+      },
+      {
+        titulo: 'II. MATERIA EN CONTROVERSIA',
+        color: C.h3,
+        cols: [
+          ['materia',    'Materia / Descripción de la controversia', 40],
+          ['fundamento', 'Fundamento legal y base contractual',      35],
+        ]
+      },
+      {
+        titulo: 'III. MONTOS Y PLAZOS EN DISPUTA',
+        color: C.h2,
+        cols: [
+          ['monto',     'Monto en Disputa (S/)',            16],
+          ['montorec',  'Monto Reconocido en Decisión (S/)',16],
+          ['plazo_disp','Plazo en Disputa (días)',           10],
+          ['plazo_rec', 'Plazo Reconocido en Decisión (d)', 10],
+        ]
+      },
+      {
+        titulo: 'IV. FECHAS Y DOCUMENTOS DEL PROCEDIMIENTO',
+        color: C.h3,
+        cols: [
+          ['fec_oc',         'F. Ocurrencia del Hecho',           14],
+          ['doc_pres',       'Doc. Petición al Centro',           18],
+          ['fec_pres',       'F. Presentación al Centro',         14],
+          ['doc_contest',    'Doc. Contestación (descargo)',       18],
+          ['fec_contestacion','F. Límite Contestación',           14],
+          ['doc_aud',        'Doc. Programación Audiencia',       18],
+          ['fec_audiencia',  'F. Límite Audiencia',               14],
+          ['doc_dec',        'Doc. Decisión JRD',                 18],
+          ['fec_dec',        'F. Decisión JRD emitida',           14],
+          ['fec_lim',        'F. Límite Decisión al Centro (+15 d.h.)', 16],
+          ['fec_notif',      'F. Límite Notificación Partes (+3 d.h.)',16],
+          ['fec_recepcion',  'F. Recepción de Obra',              14],
+        ]
+      },
+      {
+        titulo: 'V. RESULTADO Y SEGUIMIENTO',
+        color: C.h2,
+        cols: [
+          ['resultado', 'Resultado',                    24],
+          ['accion',    'Acción Post-decisión',          28],
+          ['obs',       'Observaciones / Seguimiento',   40],
+        ]
+      },
+    ];
+
+    const allColsCT = SECC_CT.flatMap(s => s.cols);
+    const TOTAL_CT = allColsCT.length;
+
+    // Fila 0: título
+    merges2c.push({s:{r:0,c:0},e:{r:0,c:TOTAL_CT-1}});
+    ws2c[XLSX.utils.encode_cell({r:0,c:0})] = {
+      v:'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  DETALLE COMPLETO DE CONTROVERSIAS / JRD', t:'s',
+      s:{font:font(12,true,'FFFFFF'),fill:fill(C.h1),alignment:align('center'),border:border('medium',C.h1)}
+    };
+    // Fila 1: subtítulo normativo
+    merges2c.push({s:{r:1,c:0},e:{r:1,c:TOTAL_CT-1}});
+    ws2c[XLSX.utils.encode_cell({r:1,c:0})] = {
+      v:'Directiva N° 012-2019-OSCE/CD  |  Arts. 243-251 RLCE  |  Plazos en d.h. (Dir. 6.2)  |  Decisiones vinculantes e inmediato cumplimiento (Art. 250)  |  Exportado: '+td, t:'s',
+      s:{font:font(8,false,'FCE4D6',true),fill:fill(C.h2),alignment:align('center'),border:border('thin',C.h2)}
+    };
+
+    // Fila 2: macro-secciones
+    let ci2 = 0;
+    SECC_CT.forEach(sec => {
+      const span = sec.cols.length;
+      if (span > 1) merges2c.push({s:{r:2,c:ci2},e:{r:2,c:ci2+span-1}});
+      ws2c[XLSX.utils.encode_cell({r:2,c:ci2})] = {v:sec.titulo,t:'s',
+        s:{font:font(9,true,'FFFFFF'),fill:fill(sec.color),alignment:align('center','center',true),border:borderB(C.h1)}};
+      for(let k=1;k<span;k++) ws2c[XLSX.utils.encode_cell({r:2,c:ci2+k})] = {v:'',t:'s',s:{fill:fill(sec.color),border:border('thin',sec.color)}};
+      ci2 += span;
+    });
+
+    // Fila 3: sub-headers
+    ci2 = 0;
+    SECC_CT.forEach(sec => {
+      sec.cols.forEach(([,label]) => {
+        ws2c[XLSX.utils.encode_cell({r:3,c:ci2})] = {v:label,t:'s',
+          s:{font:font(9,true,'FFFFFF'),fill:fill(C.hdr),alignment:align('center','center',true),border:borderB(C.h1)}};
+        ci2++;
+      });
+    });
+
+    // Fila 4+: una fila por registro
+    const fechasCT = new Set(['fec_oc','fec_pres','fec_contestacion','fec_audiencia','fec_dec','fec_lim','fec_notif','fec_recepcion']);
+    const montosCT = new Set(['monto','montorec']);
+    const numsCT   = new Set(['plazo_disp','plazo_rec']);
+
+    recs.forEach((rec, i) => {
+      const rowN = 4 + i;
+      const bg = i%2===0 ? 'FFFFFF' : C.alt;
+      let c2 = 0;
+      SECC_CT.forEach(sec => {
+        sec.cols.forEach(([campo]) => {
+          let v = rec[campo] || '';
+          if (fechasCT.has(campo)) v = fmtDate(v) || '—';
+          const isM   = montosCT.has(campo);
+          const isN   = numsCT.has(campo);
+          const isEst = campo === 'resultado';
+          const estC  = isEst ? estadoColor(v) : null;
+          const numFmt = isM ? '"S/ "#,##0.00' : isN ? '#,##0' : undefined;
+          ws2c[XLSX.utils.encode_cell({r:rowN,c:c2})] = {
+            v: (isM||isN) ? (parseFloat(v)||0) : (v||'—'),
+            t: (isM||isN) ? 'n' : 's',
+            s:{
+              font: font(9, isEst||campo==='codigo', isEst?estC.font: campo==='codigo'?C.h2: (isM||isN)?C.h2: '1A1A2E'),
+              fill: fill(isEst ? estC.fill : ['obs','materia','fundamento'].includes(campo) ? (i%2===0?'FFFDE7':C.alt) : bg),
+              alignment: align(['materia','fundamento','obs','accion'].includes(campo)?'left':'center','center',['materia','fundamento','obs'].includes(campo)),
+              border: border()
+            },
+            ...(numFmt ? {z:numFmt,s:{numFmt,...(ws2c[XLSX.utils.encode_cell({r:rowN,c:c2})]?.s||{})}} : {})
+          };
+          // Reapply numFmt inside s for xlsx-js-style
+          if (numFmt) ws2c[XLSX.utils.encode_cell({r:rowN,c:c2})].s.numFmt = numFmt;
+          c2++;
+        });
+      });
+    });
+
+    ws2c['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:4+recs.length,c:TOTAL_CT-1}});
+    ws2c['!merges'] = merges2c;
+    ws2c['!cols'] = allColsCT.map(([,,w])=>({wch:w}));
+    ws2c['!rows'] = [{hpt:26},{hpt:14},{hpt:28},{hpt:32},...recs.map(()=>({hpt:22}))];
+    XLSX.utils.book_append_sheet(wb, ws2c, 'Detalle Completo CT');
+
+    XLSX.writeFile(wb, `Controversias_RLCE_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel Controversias exportado ✓ (2 hojas)');
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // EXPORTAR ADICIONALES
+  // ════════════════════════════════════════════════════════════
+  if (t === 'ad') {
+    const base = parseFloat(localStorage.getItem('rlce_montobase')||'0');
+    const ws = {}, merges = [];
+    let row = 0;
+
+    // ── Cabecera ──────────────────────────────────────────────
+    const NCOLS_AD = 15;
+    const titleMerge = (r, v, fnt, fillC) => {
+      merges.push({s:{r,c:0},e:{r,c:NCOLS_AD-1}});
+      ws[XLSX.utils.encode_cell({r,c:0})] = {v,t:'s',s:{font:fnt,fill:fill(fillC),alignment:align('center'),border:border('thin',fillC)}};
+    };
+    titleMerge(row, 'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  PRESTACIONES ADICIONALES DE OBRA', font(12,true,'FFFFFF'), C.h1); row++;
+    titleMerge(row, `Arts. 205-206 RLCE  |  Límite: 15% monto contractual  |  CGR autoriza en 15 d.h. (Art. 206.2)  |  Silencio CGR = autorización (Art. 206.3)  |  Base contractual: ${fmtM(base)}  |  Exportado: `+td, font(8,false,'E2EFDA',true), C.h2); row++;
+    titleMerge(row, '', font(9,false,'000000'), 'F2F2F2'); row++;
+
+    // ── Headers hoja 1 ───────────────────────────────────────
+    const hdrs = [
+      ['N°',4],['Código',10],['Tipo',22],['Descripción',28],
+      ['Monto Sol. (S/)',15],['% Contrato',10],
+      ['Monto Aprob. (S/)',15],['% Acumulado',10],
+      ['F. Anotación\nCuaderno',13],['F. Límite\nExp. Técnico',13],
+      ['F. Aprobación\nEntidad',13],['N° Resolución',16],
+      ['Obs.\nRondas',8],['Estado',20],['Seguimiento',30]
+    ];
+    hdrs.forEach(([h],i) => {
+      ws[XLSX.utils.encode_cell({r:row,c:i})] = {v:h,t:'s',s:{font:font(9,true,'FFFFFF'),fill:fill(C.hdr),alignment:align('center','center',true),border:borderB(C.h1)}};
+    });
+    row++;
+
+    let acum = 0;
+    recs.forEach((r,i) => {
+      acum += parseFloat(r.montoaprob||0);
+      const pctAcum = base>0 ? acum/base : 0;
+      const bg = i%2===0?'FFFFFF':C.alt;
+      const est = estadoColor(r.estado);
+      const pctFill = pctAcum>0.15?'FFCCCC':pctAcum>0.10?'FFF2CC':bg;
+      const pctFont = pctAcum>0.15?'9C0006':pctAcum>0.10?'7F5000':'375623';
+      const nRondas = (r.obs_rondas||[]).length;
+      const rowData = [
+        [i+1,9,false,'595959',bg,'center',false,null],
+        [r.codigo,9,true,C.h2,bg,'center',false,null],
+        [r.tipo,9,false,'1A1A2E',bg,'left',true,null],
+        [r.desc,9,false,'1A1A2E',bg,'left',true,null],
+        [parseFloat(r.montosol)||0,9,true,C.h2,bg,'center',false,'"S/ "#,##0.00'],
+        [r.pct?parseFloat(r.pct)/100:'',9,false,'595959',bg,'center',false,'0.00%'],
+        [parseFloat(r.montoaprob)||0,9,true,'375623',bg,'center',false,'"S/ "#,##0.00'],
+        [base>0?pctAcum:'',9,true,pctFont,pctFill,'center',false,'0.00%'],
+        [fmtDate(r.fec_sol),9,false,'595959',bg,'center',false,null],
+        [fmtDate(r.fec_lim_ent),9,false,'595959',bg,'center',false,null],
+        [fmtDate(r.fec_aprob),9,false,'595959',bg,'center',false,null],
+        [r.nresol||'—',9,false,'595959',bg,'center',false,null],
+        [nRondas,9,true,nRondas>0?C.h2:'595959',nRondas>0?C.alt:bg,'center',false,null],
+        [r.estado,9,true,est.font,est.fill,'center',false,null],
+        [r.obs||'—',9,false,'595959',bg,'left',true,null],
+      ];
+      rowData.forEach(([v,sz,bold,fRgb,fFill,hAlign,wrap,numFmt],j) => {
+        ws[XLSX.utils.encode_cell({r:row,c:j})] = cell(v,sz,bold,fRgb,fFill,hAlign,wrap,false,numFmt);
+      });
+      row++;
+    });
+
+    // Totales
+    merges.push({s:{r:row,c:0},e:{r:row,c:3}});
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = {v:'TOTALES',t:'s',s:{font:font(9,true,'FFFFFF'),fill:fill(C.h3),alignment:align('center'),border:border('medium',C.h2)}};
+    const totSol  = recs.reduce((a,r)=>a+parseFloat(r.montosol||0),0);
+    const totAprob = recs.reduce((a,r)=>a+parseFloat(r.montoaprob||0),0);
+    const pctTotal = base>0 ? totAprob/base : 0;
+    const ptFill = pctTotal>0.15?'FFCCCC':pctTotal>0.10?'FFF2CC':'E2EFDA';
+    const ptFont = pctTotal>0.15?'9C0006':pctTotal>0.10?'7F5000':'1E5C14';
+    [[4,totSol,'"S/ "#,##0.00','FFFFFF'],[6,totAprob,'"S/ "#,##0.00','FFFFFF'],[7,pctTotal,'0.00%',ptFill]].forEach(([col,val,fmt,bg]) => {
+      ws[XLSX.utils.encode_cell({r:row,c:col})] = {v:val,t:'n',z:fmt,s:{numFmt:fmt,font:font(9,true,bg==='FFFFFF'?'FFFFFF':ptFont),fill:fill(col===7?ptFill:C.h3),alignment:align('center'),border:border('medium',C.h2)}};
+    });
+    for(let c=1;c<NCOLS_AD;c++) { if(![4,6,7].includes(c)) ws[XLSX.utils.encode_cell({r:row,c})] = {v:'',t:'s',s:{fill:fill(C.h3),border:border('medium',C.h2)}}; }
+    row++;
+
+    // Alerta CGR
+    row++;
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS_AD-1}});
+    const alertText = pctTotal>0.15
+      ? `⚠ SUPERA EL 15% (${(pctTotal*100).toFixed(2)}%) – REQUIERE AUTORIZACIÓN EXPRESA DE LA CGR (Art. 206 RLCE)`
+      : pctTotal>0.10 ? `⚡ ACUMULADO ${(pctTotal*100).toFixed(2)}% – PRÓXIMO AL LÍMITE DEL 15%`
+      : `✔ ACUMULADO ${(pctTotal*100).toFixed(2)}% – DENTRO DEL LÍMITE PERMITIDO`;
+    const alertFill = pctTotal>0.15?'FFCCCC':pctTotal>0.10?'FFF2CC':'E2EFDA';
+    const alertFont2 = pctTotal>0.15?'9C0006':pctTotal>0.10?'7F5000':'1E5C14';
+    ws[XLSX.utils.encode_cell({r:row,c:0})] = {v:alertText,t:'s',s:{font:font(9,true,alertFont2),fill:fill(alertFill),alignment:align('center'),border:border('medium',alertFont2)}};
+    row++;
+
+    // Resumen por estado
+    row++;
+    merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS_AD-1}});
+    secRow(ws, row, NCOLS_AD, 'RESUMEN POR ESTADO', C.h2, 'FFFFFF'); row++;
+    ['EN EVALUACIÓN','EN EVALUACIÓN CGR','APROBADO – Titular Entidad','APROBADO – Con autorización CGR','APROBADO – Silencio CGR (Art. 206.3)','OBSERVADO','RECHAZADO','RETIRADO'].forEach(est => {
+      const count = recs.filter(r=>r.estado===est).length;
+      if (!count) return;
+      const ec = estadoColor(est);
+      merges.push({s:{r:row,c:0},e:{r:row,c:NCOLS_AD-2}});
+      ws[XLSX.utils.encode_cell({r:row,c:0})] = {v:est,t:'s',s:{font:font(9,true,ec.font),fill:fill(ec.fill),alignment:align('left'),border:border()}};
+      ws[XLSX.utils.encode_cell({r:row,c:NCOLS_AD-1})] = {v:count,t:'n',s:{font:font(9,true,ec.font),fill:fill(ec.fill),alignment:align('center'),border:border()}};
+      row++;
+    });
+
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:row,c:NCOLS_AD-1}});
+    ws['!merges'] = merges;
+    ws['!cols'] = hdrs.map(([,w])=>({wch:w}));
+    ws['!rows'] = [{hpt:26},{hpt:14},{hpt:6},{hpt:32},...recs.map(()=>({hpt:20})),{hpt:18},{hpt:6},{hpt:18},{hpt:6},...Array(8).fill({hpt:16})];
+    XLSX.utils.book_append_sheet(wb, ws, 'Adicionales de Obra');
+
+    // ════════════════════════════════════════════════════════
+    // HOJA 2 – DETALLE COMPLETO EN COLUMNAS (con rondas)
+    // ════════════════════════════════════════════════════════
+    const ws2a = {}, merges2a = [];
+
+    // Calcular max rondas para generar columnas dinámicas
+    const maxRondas = Math.max(0, ...recs.map(r=>(r.obs_rondas||[]).length));
+
+    const SECC_AD = [
+      { titulo:'I. IDENTIFICACIÓN', color:C.h2,
+        cols:[['codigo','Código',12],['tipo','Tipo de Prestación',26],['ncontrato','N° Contrato',14]] },
+      { titulo:'II. DESCRIPCIÓN TÉCNICA', color:C.h3,
+        cols:[['desc','Descripción / Partidas',38],['causal','Causal / Origen',30]] },
+      { titulo:'III. MONTOS', color:C.h2,
+        cols:[
+          ['montosol','Monto Sol. (S/)',15],['pct','% Contrato',10],
+          ['montoaprob','Monto Aprob. (S/)',15],['plazo_dias','Plazo Adicional (días)',12]
+        ]
+      },
+      { titulo:'IV. SUSTENTO DOCUMENTAL', color:C.h3,
+        cols:[
+          ['asiento','Asiento Cuaderno Obra',20],['inf_sup','Informe Supervisor',18],
+          ['inf_res','Informe Residente',18],['exp_tec','Expediente Técnico',18],['presupuesto','Ref. Presupuesto',18]
+        ]
+      },
+      { titulo:'V. FECHAS Y APROBACIÓN', color:C.h2,
+        cols:[
+          ['fec_sol','F. Anotación Cuaderno',14],['fec_sup','F. Límite Supervisor (+5d)',14],
+          ['fec_lim_ent','F. Límite Exp. Técnico (+15d)',14],['fec_aprob','F. Resolución Aprobatoria',14],
+          ['fec_cgr','F. Presentación CGR',14],['fec_cgr_lim','F. Límite Pronunciamiento CGR',16],
+          ['nresol','N° Resolución',18],['estado','Estado',22]
+        ]
+      },
+    ];
+
+    // Agregar secciones dinámicas de rondas de observaciones
+    for (let rn = 1; rn <= maxRondas; rn++) {
+      SECC_AD.push({
+        titulo: `VI. RONDA DE OBSERVACIÓN N° ${rn}`,
+        color: rn%2===0 ? C.h3 : C.h2,
+        cols: [
+          [`obs_ronda_${rn}_desc`,   `Obs. ${rn} – Descripción`,          30],
+          [`obs_ronda_${rn}_por`,    `Obs. ${rn} – Formulada por`,        14],
+          [`obs_ronda_${rn}_cnotif`, `Obs. ${rn} – Carta Notificación`,   18],
+          [`obs_ronda_${rn}_fnotif`, `Obs. ${rn} – Fecha Notificación`,   14],
+          [`obs_ronda_${rn}_clevant`,`Obs. ${rn} – Carta Levantamiento`,  18],
+          [`obs_ronda_${rn}_flevant`,`Obs. ${rn} – Fecha Levantamiento`,  14],
+        ]
+      });
+    }
+
+    // Agregar seguimiento general al final
+    SECC_AD.push({ titulo:'VII. SEGUIMIENTO', color:C.h3,
+      cols:[['obs','Observaciones / Acciones Pendientes',45]] });
+
+    const allColsAD = SECC_AD.flatMap(s => s.cols);
+    const TOTAL_AD = allColsAD.length;
+
+    // Fila 0: título
+    merges2a.push({s:{r:0,c:0},e:{r:0,c:TOTAL_AD-1}});
+    ws2a[XLSX.utils.encode_cell({r:0,c:0})] = {v:'CONSULTORA GÁLVEZ RODRÍGUEZ  ·  DETALLE COMPLETO DE PRESTACIONES ADICIONALES DE OBRA',t:'s',
+      s:{font:font(12,true,'FFFFFF'),fill:fill(C.h1),alignment:align('center'),border:border('medium',C.h1)}};
+    // Fila 1: normativa
+    merges2a.push({s:{r:1,c:0},e:{r:1,c:TOTAL_AD-1}});
+    ws2a[XLSX.utils.encode_cell({r:1,c:0})] = {v:`Arts. 205-206 RLCE  |  Límite 15%  |  CGR: 15 d.h. (Art. 206.2)  |  Base contractual: ${fmtM(base)}  |  Exportado: `+td,t:'s',
+      s:{font:font(8,false,'E2EFDA',true),fill:fill(C.h2),alignment:align('center'),border:border('thin',C.h2)}};
+
+    // Fila 2: macro-secciones
+    let ci3 = 0;
+    SECC_AD.forEach(sec => {
+      const span = sec.cols.length;
+      if (span>1) merges2a.push({s:{r:2,c:ci3},e:{r:2,c:ci3+span-1}});
+      ws2a[XLSX.utils.encode_cell({r:2,c:ci3})] = {v:sec.titulo,t:'s',
+        s:{font:font(9,true,'FFFFFF'),fill:fill(sec.color),alignment:align('center','center',true),border:borderB(C.h1)}};
+      for(let k=1;k<span;k++) ws2a[XLSX.utils.encode_cell({r:2,c:ci3+k})] = {v:'',t:'s',s:{fill:fill(sec.color),border:border('thin',sec.color)}};
+      ci3 += span;
+    });
+
+    // Fila 3: sub-headers
+    ci3 = 0;
+    SECC_AD.forEach(sec => {
+      sec.cols.forEach(([,label]) => {
+        ws2a[XLSX.utils.encode_cell({r:3,c:ci3})] = {v:label,t:'s',
+          s:{font:font(9,true,'FFFFFF'),fill:fill(C.hdr),alignment:align('center','center',true),border:borderB(C.h1)}};
+        ci3++;
+      });
+    });
+
+    // Fila 4+: una fila por registro
+    const fechasAD = new Set(['fec_sol','fec_sup','fec_lim_ent','fec_aprob','fec_cgr','fec_cgr_lim']);
+    const montosAD = new Set(['montosol','montoaprob']);
+    const numsAD   = new Set(['plazo_dias']);
+
+    recs.forEach((rec, i) => {
+      const rowN2 = 4 + i;
+      const bg = i%2===0?'FFFFFF':C.alt;
+      let c3 = 0;
+      SECC_AD.forEach(sec => {
+        sec.cols.forEach(([campo]) => {
+          let v = '';
+          // Campos de rondas de observaciones (dinámicos)
+          if (campo.startsWith('obs_ronda_')) {
+            const parts = campo.split('_'); // obs_ronda_N_tipo
+            const rondaIdx = parseInt(parts[2]) - 1;
+            const tipoCampo = parts.slice(3).join('_');
+            const ronda = (rec.obs_rondas||[])[rondaIdx];
+            if (ronda) {
+              if (tipoCampo==='desc')    v = ronda.descripcion||'';
+              if (tipoCampo==='por')     v = ronda.por||'';
+              if (tipoCampo==='cnotif')  v = ronda.carta_notif||'';
+              if (tipoCampo==='fnotif')  v = fmtDate(ronda.fec_notif)||'';
+              if (tipoCampo==='clevant') v = ronda.carta_levant||'';
+              if (tipoCampo==='flevant') v = fmtDate(ronda.fec_levant)||'';
+            }
+          } else {
+            v = rec[campo] || '';
+            if (fechasAD.has(campo)) v = fmtDate(v) || '—';
+            if (campo==='pct') v = v ? parseFloat(v)/100 : '';
+          }
+          const isM   = montosAD.has(campo);
+          const isN   = numsAD.has(campo);
+          const isEst = campo==='estado';
+          const isPct = campo==='pct';
+          const estC  = isEst ? estadoColor(v) : null;
+          const numFmt = isM?'"S/ "#,##0.00': isN?'#,##0': isPct?'0.00%': undefined;
+          const isRondaFec = campo.includes('fnotif')||campo.includes('flevant');
+          const isRondaC   = campo.includes('cnotif')||campo.includes('clevant');
+          const rondaFill  = campo.startsWith('obs_ronda_') ? (i%2===0?'FFF8F0':'FEEEE0') : bg;
+
+          ws2a[XLSX.utils.encode_cell({r:rowN2,c:c3})] = {
+            v: (isM||isN||isPct) ? (parseFloat(v)||0) : (v||'—'),
+            t: (isM||isN||isPct) ? 'n' : 's',
+            s:{
+              font: font(9, isEst||campo==='codigo', isEst?estC.font: campo==='codigo'?C.h2: (isM||isN)?C.h2: '1A1A2E'),
+              fill: fill(isEst?estC.fill: ['obs','desc','causal'].includes(campo)?'FFFDE7': rondaFill),
+              alignment: align(['desc','causal','obs'].includes(campo)||campo.includes('desc')?'left':'center','center',['desc','causal','obs'].includes(campo)),
+              border: border(),
+              ...(numFmt?{numFmt}:{})
+            }
+          };
+          if (numFmt) { ws2a[XLSX.utils.encode_cell({r:rowN2,c:c3})].z=numFmt; ws2a[XLSX.utils.encode_cell({r:rowN2,c:c3})].s.numFmt=numFmt; }
+          c3++;
+        });
+      });
+    });
+
+    ws2a['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:4+recs.length,c:TOTAL_AD-1}});
+    ws2a['!merges'] = merges2a;
+    ws2a['!cols'] = allColsAD.map(([,,w])=>({wch:w}));
+    ws2a['!rows'] = [{hpt:26},{hpt:14},{hpt:28},{hpt:32},...recs.map(()=>({hpt:22}))];
+    XLSX.utils.book_append_sheet(wb, ws2a, 'Detalle Completo AD');
+
+    XLSX.writeFile(wb, `Adicionales_RLCE_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel Adicionales exportado ✓ (2 hojas)');
+  }
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+const _ch={};
+const dC=(id)=>{ if(_ch[id]){_ch[id].destroy();delete _ch[id];} };
+
+function refreshDash() {
+  renderKPIs(); renderChAP(); renderChCT(); renderChMontos(); renderGauge(); renderChDias(); renderTimeline();
+}
+function renderKPIs() {
+  const ap=store.ap, ct=store.ct, ad=store.ad, td=today();
+  const venc=ap.filter(r=>r.estado==='EN TRÁMITE'&&r.fec_lim&&r.fec_lim<td).length+ct.filter(r=>r.resultado==='EN TRÁMITE'&&r.fec_lim&&r.fec_lim<td).length;
+  const base=parseFloat(localStorage.getItem('rlce_montobase')||'0');
+  const mA=ad.filter(r=>r.montoaprob).reduce((a,r)=>a+parseFloat(r.montoaprob||0),0);
+  const pct=base>0?(mA/base*100).toFixed(1):'—';
+  const diasAp=ap.reduce((a,r)=>a+parseInt(r.dias_ap||0),0);
+  const mCtFav=ct.filter(r=>r.resultado==='FAVORABLE'||r.resultado==='PARCIALMENTE FAVORABLE').reduce((a,r)=>a+parseFloat(r.montorec||0),0);
+  document.getElementById('dash-kpis').innerHTML=`
+    <div class="kpi-card" style="border-left:4px solid var(--blue)"><div class="kpi-val" style="color:var(--blue)">${ap.length}</div><div class="kpi-lbl">Ampliaciones de Plazo</div><div class="kpi-sub">${ap.filter(r=>r.estado.includes('APROBADO')||r.estado==='SILENCIO POSITIVO').length} aprobadas · ${diasAp} días ganados</div></div>
+    <div class="kpi-card" style="border-left:4px solid var(--orange)"><div class="kpi-val" style="color:var(--orange)">${ct.length}</div><div class="kpi-lbl">Controversias</div><div class="kpi-sub">${ct.filter(r=>r.resultado==='FAVORABLE'||r.resultado==='PARCIALMENTE FAVORABLE').length} favorables · ${fmtM(mCtFav)}</div></div>
+    <div class="kpi-card" style="border-left:4px solid var(--green)"><div class="kpi-val" style="color:var(--green)">${ad.length}</div><div class="kpi-lbl">Adicionales de Obra</div><div class="kpi-sub">${ad.filter(r=>r.estado.includes('APROBADO')).length} aprobados · ${pct}% acum.</div></div>
+    ${venc?`<div class="kpi-card" style="border-left:4px solid #C00000"><div class="kpi-val" style="color:#C00000">${venc}</div><div class="kpi-lbl">Plazos vencidos</div><div class="kpi-sub">Trámites sin respuesta oportuna</div></div>`:`<div class="kpi-card" style="border-left:4px solid var(--green)"><div class="kpi-val" style="color:var(--green)">✔</div><div class="kpi-lbl">Sin plazos vencidos</div><div class="kpi-sub">Todos los trámites al día</div></div>`}`;
+}
+
+function renderChAP() {
+  dC('ap-e');
+  const ap=store.ap;
+  if(!ap.length){const el=document.getElementById('ch-ap-estado'); el.closest('.chart-body').innerHTML='<div class="empty-dash">Sin registros de AP</div>';return;}
+  const cnt={'APROBADO':0,'APROBADO PARCIAL':0,'EN TRÁMITE':0,'DENEGADO':0,'SILENCIO POSITIVO':0,'RETIRADO':0};
+  ap.forEach(r=>{if(cnt[r.estado]!==undefined)cnt[r.estado]++; else cnt['RETIRADO']++;});
+  const lbls=Object.keys(cnt).filter(k=>cnt[k]>0), data=lbls.map(k=>cnt[k]);
+  const cols={'APROBADO':'#375623','APROBADO PARCIAL':'#70AD47','EN TRÁMITE':'#FFD966','DENEGADO':'#C00000','SILENCIO POSITIVO':'#1F3864','RETIRADO':'#A5A5A5'};
+  const ctx=document.getElementById('ch-ap-estado').getContext('2d');
+  _ch['ap-e']=new Chart(ctx,{type:'doughnut',data:{labels:lbls,datasets:[{data,backgroundColor:lbls.map(l=>cols[l]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw} (${Math.round(c.raw/ap.length*100)}%)`}}}}});
+  document.getElementById('leg-ap').innerHTML=lbls.map(l=>`<div class="legend-item"><div class="legend-dot" style="background:${cols[l]}"></div>${l}: <strong>${cnt[l]}</strong></div>`).join('');
+}
+
+function renderChCT() {
+  dC('ct-e');
+  const ct=store.ct;
+  if(!ct.length){const el=document.getElementById('ch-ct-estado'); el.closest('.chart-body').innerHTML='<div class="empty-dash">Sin registros de controversias</div>';return;}
+  const cnt={'FAVORABLE':0,'PARCIALMENTE FAVORABLE':0,'EN TRÁMITE':0,'DESFAVORABLE':0,'DESISTIDO':0,'TRANSADO':0};
+  ct.forEach(r=>{if(cnt[r.resultado]!==undefined)cnt[r.resultado]++;});
+  const lbls=Object.keys(cnt).filter(k=>cnt[k]>0), data=lbls.map(k=>cnt[k]);
+  const cols={'FAVORABLE':'#375623','PARCIALMENTE FAVORABLE':'#70AD47','EN TRÁMITE':'#FFD966','DESFAVORABLE':'#C00000','DESISTIDO':'#A5A5A5','TRANSADO':'#2E75B6'};
+  const ctx=document.getElementById('ch-ct-estado').getContext('2d');
+  _ch['ct-e']=new Chart(ctx,{type:'doughnut',data:{labels:lbls,datasets:[{data,backgroundColor:lbls.map(l=>cols[l]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw} (${Math.round(c.raw/ct.length*100)}%)`}}}}});
+  document.getElementById('leg-ct').innerHTML=lbls.map(l=>`<div class="legend-item"><div class="legend-dot" style="background:${cols[l]}"></div>${l}: <strong>${cnt[l]}</strong></div>`).join('');
+}
+
+function renderChMontos() {
+  dC('montos');
+  const ct=store.ct, ad=store.ad;
+  const ctS=ct.reduce((a,r)=>a+parseFloat(r.monto||0),0), ctR=ct.reduce((a,r)=>a+parseFloat(r.montorec||0),0);
+  const adS=ad.reduce((a,r)=>a+parseFloat(r.montosol||0),0), adA=ad.reduce((a,r)=>a+parseFloat(r.montoaprob||0),0);
+  const ctx=document.getElementById('ch-montos').getContext('2d');
+  _ch['montos']=new Chart(ctx,{type:'bar',data:{labels:['Contr. – En disputa','Contr. – Reconocido','Adic. – Solicitado','Adic. – Aprobado'],datasets:[{data:[ctS,ctR,adS,adA],backgroundColor:['rgba(197,90,17,0.7)','rgba(55,86,35,0.7)','rgba(46,117,182,0.7)','rgba(55,86,35,0.7)'],borderColor:['#C55A11','#375623','#2E75B6','#375623'],borderWidth:1.5,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` S/ ${c.raw.toLocaleString('es-PE',{minimumFractionDigits:2})}`}}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10},callback:v=>'S/ '+v.toLocaleString('es-PE')}}}}});
+}
+
+function renderGauge() {
+  const base=parseFloat(localStorage.getItem('rlce_montobase')||'0');
+  const mA=store.ad.filter(r=>r.montoaprob).reduce((a,r)=>a+parseFloat(r.montoaprob||0),0);
+  const pct=base>0?(mA/base*100):0;
+  const col=pct>15?'#C00000':pct>10?'#ED7D31':'#375623';
+  const R=70, cx=110, circ=Math.PI*R, dash=(Math.min(pct,100)/100)*circ;
+  document.getElementById('gauge-ad').innerHTML=`
+    <svg width="220" height="140" viewBox="0 0 220 140">
+      <path d="M 40 110 A 70 70 0 0 1 180 110" fill="none" stroke="#E8ECF0" stroke-width="16" stroke-linecap="round"/>
+      <path d="M 40 110 A 70 70 0 0 1 180 110" fill="none" stroke="${col}" stroke-width="16" stroke-linecap="round" stroke-dasharray="${dash} ${circ}"/>
+      <text x="110" y="96" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="22" font-weight="600" fill="${col}">${pct.toFixed(1)}%</text>
+      <text x="110" y="114" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="10" fill="#6B7280">del monto contractual</text>
+      <text x="40" y="128" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" fill="#6B7280">0%</text>
+      <text x="110" y="128" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" fill="#C00000">── 15%</text>
+      <text x="180" y="128" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="9" fill="#6B7280">100%</text>
+    </svg>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;">Aprobado: ${fmtM(mA)} / Base: ${base>0?fmtM(base):'No configurado'}</div>
+    ${pct>15?'<div style="color:#C00000;font-size:11px;font-weight:600;margin-top:5px;">⚠ Supera 15% – Requiere aprobación CGR</div>':pct>10?'<div style="color:#7F6000;font-size:11px;font-weight:600;margin-top:5px;">⚡ Próximo al límite del 15%</div>':base>0?'<div style="color:var(--green);font-size:11px;font-weight:600;margin-top:5px;">✔ Dentro del límite permitido</div>':''}`;
+}
+
+function renderChDias() {
+  dC('ap-d');
+  const ap=store.ap.filter(r=>r.dias);
+  if(!ap.length){const el=document.getElementById('ch-ap-dias'); el.closest('.chart-body').innerHTML='<div class="empty-dash">Sin datos de días</div>';return;}
+  const ctx=document.getElementById('ch-ap-dias').getContext('2d');
+  _ch['ap-d']=new Chart(ctx,{type:'bar',data:{labels:ap.map(r=>r.codigo),datasets:[{label:'Días solicitados',data:ap.map(r=>parseInt(r.dias||0)),backgroundColor:'rgba(46,117,182,0.7)',borderColor:'#2E75B6',borderWidth:1.5,borderRadius:3},{label:'Días aprobados',data:ap.map(r=>parseInt(r.dias_ap||0)),backgroundColor:'rgba(55,86,35,0.7)',borderColor:'#375623',borderWidth:1.5,borderRadius:3}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:11}}},scales:{x:{ticks:{font:{size:9}}},y:{beginAtZero:true,ticks:{font:{size:10}},title:{display:true,text:'Días',font:{size:10}}}}}});
+}
+
+function renderTimeline() {
+  const td=today(), rows=[];
+  store.ap.forEach(r=>{ if(r.estado==='EN TRÁMITE'&&r.fec_lim){ const d=Math.round((new Date(r.fec_lim)-new Date(td))/86400000); rows.push({tipo:'AP',col:'var(--blue)',codigo:r.codigo,desc:r.causal,fp:r.fec_pres,fl:r.fec_lim,d,est:r.estado}); } });
+  store.ct.forEach(r=>{ if(r.resultado==='EN TRÁMITE'&&r.fec_lim){ const d=Math.round((new Date(r.fec_lim)-new Date(td))/86400000); rows.push({tipo:'JRD',col:'var(--orange)',codigo:r.codigo,desc:(r.materia||'').substring(0,45),fp:r.fec_pres,fl:r.fec_lim,d,est:r.resultado}); } });
+  store.ad.forEach(r=>{ if(r.estado.includes('EVALUAC')){ rows.push({tipo:'ADIC',col:'var(--green)',codigo:r.codigo,desc:(r.desc||'').substring(0,45),fp:r.fec_sol,fl:'—',d:null,est:r.estado}); } });
+  rows.sort((a,b)=>{ if(a.d===null&&b.d===null)return 0; if(a.d===null)return 1; if(b.d===null)return -1; return a.d-b.d; });
+  const tb=document.getElementById('tl-tbody');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7"><div class="empty-dash">No hay solicitudes en trámite con plazos pendientes</div></td></tr>';return;}
+  tb.innerHTML=rows.map(r=>{ let bc='days-na',dt='—'; if(r.d!==null){if(r.d<0){bc='days-vencido';dt=`Vencido (${Math.abs(r.d)}d)`;}else if(r.d<=3){bc='days-urgente';dt=`${r.d}d URGENTE`;}else if(r.d<=7){bc='days-urgente';dt=`${r.d} días`;}else{bc='days-ok';dt=`${r.d} días`;}} return `<tr><td><span style="background:${r.col};color:#fff;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;">${r.tipo}</span></td><td><strong>${r.codigo}</strong></td><td style="max-width:200px;white-space:normal;font-size:10px;">${r.desc}</td><td style="white-space:nowrap;">${fmtDate(r.fp)}</td><td style="white-space:nowrap;">${r.fl!=='—'?fmtDate(r.fl):'—'}</td><td><span class="days-badge ${bc}">${dt}</span></td><td><span class="pill p-tramite">${r.est}</span></td></tr>`; }).join('');
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  const mb=localStorage.getItem('rlce_montobase');
+  if(mb) document.getElementById('ad-montobase').value=mb;
+  ['ap','ct','ad'].forEach(t=>{ renderTable(t); renderStats(t); });
+  recalcAdStats();
+  loadDraft('ap'); loadDraft('ct'); loadDraft('ad');
+  // Intentar sincronizar con Google Sheets al cargar
+  loadFromSheets();
+});
+document.getElementById('ad-montobase').addEventListener('input',()=>{ saveMontoBase(); recalcAdStats(); });
+</script>
+</body>
+</html>
