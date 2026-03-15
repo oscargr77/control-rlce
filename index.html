@@ -892,7 +892,14 @@ tbody tr:last-child td{border-bottom:none;}
 <div id="sec-dash" class="section">
   <div class="dash-header">
     <div><div class="dash-title">Dashboard Ejecutivo</div><div class="dash-sub">Actualización automática · AP | Controversias | Adicionales</div></div>
-    <button class="btn" style="background:#FFD966;color:var(--navy);font-size:11px;font-weight:600;" onclick="refreshDash()">⟳ Actualizar</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn" style="background:#FFD966;color:var(--navy);font-size:11px;font-weight:600;" onclick="refreshDash()">⟳ Actualizar</button>
+      <button class="btn" style="background:#2E75B6;color:#fff;font-size:11px;font-weight:600;" onclick="exportBackupJSON()" title="Descargar todos los registros como archivo de respaldo">⬇ Backup JSON</button>
+      <label class="btn" style="background:#375623;color:#fff;font-size:11px;font-weight:600;cursor:pointer;margin:0;" title="Restaurar registros desde un archivo de respaldo">
+        ⬆ Restaurar JSON
+        <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="importBackupJSON(event)">
+      </label>
+    </div>
   </div>
   <div class="kpi-row" id="dash-kpis"></div>
   <div class="dash-grid">
@@ -921,7 +928,7 @@ tbody tr:last-child td{border-bottom:none;}
 // ═══════════════════════════════════════════
 // INSTRUCCIÓN: Reemplaza esta URL con la de tu Apps Script desplegado
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxoR_VjIEsWsqEiGd6xZb1b_RkuHMOjwox1i0m3me9emHej8Ej9cgpr01XtVaE5kIFv/exec';
-const SYNC_ENABLED = GAS_URL !== 'https://script.google.com/macros/s/AKfycbxoR_VjIEsWsqEiGd6xZb1b_RkuHMOjwox1i0m3me9emHej8Ej9cgpr01XtVaE5kIFv/exec';
+const SYNC_ENABLED = GAS_URL !== 'TU_APPS_SCRIPT_URL_AQUI';
 
 // ── Indicador de sincronización ──────────────
 function setSyncStatus(status) {
@@ -2582,6 +2589,82 @@ function renderTimeline() {
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// BACKUP / RESTORE JSON
+// ═══════════════════════════════════════════
+function exportBackupJSON() {
+  const backup = {
+    version: '1.0',
+    fecha: new Date().toISOString(),
+    consultora: 'Gálvez Rodríguez',
+    montobase: localStorage.getItem('rlce_montobase') || '',
+    ap: store.ap,
+    ct: store.ct,
+    ad: store.ad,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `RLCE_Backup_${fecha}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Backup descargado: RLCE_Backup_${fecha}.json ✓`);
+}
+
+function importBackupJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const backup = JSON.parse(e.target.result);
+      // Validar que es un backup válido
+      if (!backup.ap || !backup.ct || !backup.ad) {
+        toast('Archivo inválido — no es un backup de Control RLCE', 'err');
+        return;
+      }
+      // Confirmar antes de restaurar
+      const nAP = backup.ap.length, nCT = backup.ct.length, nAD = backup.ad.length;
+      const fecha = backup.fecha ? new Date(backup.fecha).toLocaleDateString('es-PE') : 'desconocida';
+      if (!confirm(
+        `¿Restaurar este backup?\n\n` +
+        `Fecha del backup: ${fecha}\n` +
+        `• ${nAP} Ampliaciones de Plazo\n` +
+        `• ${nCT} Controversias\n` +
+        `• ${nAD} Adicionales de Obra\n\n` +
+        `⚠ Esto reemplazará todos los registros actuales.`
+      )) return;
+      // Restaurar datos
+      store.ap = backup.ap;
+      store.ct = backup.ct;
+      store.ad = backup.ad;
+      localStorage.setItem('rlce_ap', JSON.stringify(store.ap));
+      localStorage.setItem('rlce_ct', JSON.stringify(store.ct));
+      localStorage.setItem('rlce_ad', JSON.stringify(store.ad));
+      if (backup.montobase) {
+        localStorage.setItem('rlce_montobase', backup.montobase);
+        document.getElementById('ad-montobase').value = backup.montobase;
+      }
+      // Actualizar UI
+      ['ap','ct','ad'].forEach(t => { renderTable(t); renderStats(t); });
+      recalcAdStats();
+      refreshDash();
+      // Sincronizar con Sheets si está habilitado
+      syncToSheets('all', { ap: store.ap, ct: store.ct, ad: store.ad,
+        montobase: localStorage.getItem('rlce_montobase')||'' });
+      toast(`Backup restaurado: ${nAP} AP · ${nCT} CT · ${nAD} AD ✓`);
+    } catch(err) {
+      toast('Error al leer el archivo JSON', 'err');
+      console.error(err);
+    }
+    // Limpiar el input para permitir volver a cargar el mismo archivo
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   const mb=localStorage.getItem('rlce_montobase');
   if(mb) document.getElementById('ad-montobase').value=mb;
