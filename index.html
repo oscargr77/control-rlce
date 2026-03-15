@@ -927,7 +927,7 @@ tbody tr:last-child td{border-bottom:none;}
 // CONFIGURACIÓN GOOGLE SHEETS SYNC
 // ═══════════════════════════════════════════
 // INSTRUCCIÓN: Reemplaza esta URL con la de tu Apps Script desplegado
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxoR_VjIEsWsqEiGd6xZb1b_RkuHMOjwox1i0m3me9emHej8Ej9cgpr01XtVaE5kIFv/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyg0U-cIHN6krwGXRi34n08TXXoUovPzx0pUjwd_K9LblWtm0X5CVSp6qDIKbrcB2pQ/exec';
 const SYNC_ENABLED = GAS_URL !== 'TU_APPS_SCRIPT_URL_AQUI';
 
 // ── Indicador de sincronización ──────────────
@@ -950,14 +950,16 @@ async function syncToSheets(section, data) {
   if (!SYNC_ENABLED) return;
   setSyncStatus('syncing');
   try {
+    // Google Apps Script no soporta CORS en POST directamente.
+    // Usamos un form submission trick via fetch con URLSearchParams
+    const params = new URLSearchParams();
+    params.append('payload', JSON.stringify({ action: 'save', section, data }));
     await fetch(GAS_URL, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'save', section, data })
+      body: params
     });
     setSyncStatus('ok');
-    setTimeout(()=>setSyncStatus('ok'), 2000);
   } catch(e) {
     setSyncStatus('error');
     console.warn('Sync error:', e);
@@ -969,7 +971,10 @@ async function loadFromSheets() {
   if (!SYNC_ENABLED) { setSyncStatus('offline'); return; }
   setSyncStatus('syncing');
   try {
-    const res = await fetch(GAS_URL + '?action=load', { mode: 'cors' });
+    const res = await fetch(GAS_URL, {
+      method: 'GET',
+      redirect: 'follow'
+    });
     const json = await res.json();
     if (json.ap) { store.ap = json.ap; localStorage.setItem('rlce_ap', JSON.stringify(json.ap)); }
     if (json.ct) { store.ct = json.ct; localStorage.setItem('rlce_ct', JSON.stringify(json.ct)); }
